@@ -17,4 +17,4 @@ We feel if we get a working implementation of the Channeler API from GoCZMQ, tha
 
 For the initial implementation, we are going to punt on worrying about CURVE encryption and ZAP support. If we get as far as having a pure Go implementation of Channeler that successfully interacts with other ZeroMQ implementations, we will then worry about the problem of authentication and encryption.
 
-Contribution solutions for problems outside of the scope of our initial problem set are welcome. See the [contributors guide](https://github.com/zeromq/goczmq/CONTRIBUTORS.md) for our process.
+Contribution solutions for problems outside of the scope of our initial problem set are welcome. See the [contributors guide](https://github.com/zeromq/gogozmq/CONTRIBUTING.md) for our process.
