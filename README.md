@@ -7,7 +7,7 @@ Pure Go Implementation of a Subset of ZeroMQ
 * CZMQ has a large API surface and we are only interested in a subset of it
 
 ## Proposed Solution
-GoGoZMQ will be a pure go implementation of a subset of ZMTP, wrapped with a Go friendly API. After a year of working on and with [GoCZMQ](https://github.com/zeromq/), we have come to some conclusions on our use of ZeroMQ from Go:
+GoGoZMQ will be a pure go implementation of a subset of ZMTP, wrapped with a Go friendly API. After a year of working on and with [GoCZMQ](https://github.com/zeromq/goczmq), we have come to some conclusions on our use of ZeroMQ from Go:
 * The [GoCZMQ Channeler API](https://godoc.org/github.com/zeromq/goczmq#Channeler) covers the majority of the ways we wish to use ZeroMQ from Go.
 * The TCP transport covers most of our use case for ZeroMQ in Go. 
 * The ZMQ_PUB, ZMQ_SUB, ZMQ_CLIENT, and ZMQ_SERVER socket types cover most of our use cases.
