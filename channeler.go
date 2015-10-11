@@ -56,7 +56,7 @@ func newChanneler(sockType int, endpoints, subscribe string) (*Channeler, error)
 	buf := make([]byte, 255)
 	_, err = c.conn.Read(buf[:1])
 
-	if buf[0] != 0xff {
+	if buf[0] != zmtpGreetOutgoing.signature[0] {
 		return c, fmt.Errorf("bad protocol signature")
 	}
 
@@ -76,7 +76,11 @@ func newChanneler(sockType int, endpoints, subscribe string) (*Channeler, error)
 		return c, err
 	}
 
-	if buf[10] != 0x03 {
+	if buf[10] != zmtpGreetOutgoing.version[0] {
+		return c, fmt.Errorf("bad protocol version")
+	}
+
+	if buf[11] != zmtpGreetOutgoing.version[1] {
 		return c, fmt.Errorf("bad protocol version")
 	}
 
