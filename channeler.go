@@ -8,24 +8,19 @@ import (
 )
 
 var (
-	zmtpGreetOutgoing = &zmtpGreet{
-		signature: [10]byte{0xff, 0, 0, 0, 0, 0, 0, 0, 1, 0x7f},
-		version:   [2]byte{3, 0},
-		mechanism: [20]byte{'N', 'U', 'L', 'L', 0},
-		asServer:  [1]byte{0},
-	}
+	signature = []byte{0xff, 0, 0, 0, 0, 0, 0, 0, 1, 0x7f}
 )
 
 type Channeler struct {
 	conn      net.Conn
-	sockType  int
+	sockType  byte
 	endpoints string
 	subscribe string
 	SendChan  chan<- [][]byte
 	RecvChan  <-chan [][]byte
 }
 
-func newChanneler(sockType int, endpoints, subscribe string) (*Channeler, error) {
+func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error) {
 	sendChan := make(chan [][]byte)
 	recvChan := make(chan [][]byte)
 
@@ -48,40 +43,62 @@ func newChanneler(sockType int, endpoints, subscribe string) (*Channeler, error)
 		return c, err
 	}
 
-	_, err = zmtpGreetOutgoing.sendSignature(c.conn)
+	zmtpGreetOutgoing := &zmtpGreet{
+		sockType: sockType,
+	}
+
+	_, err = zmtpGreetOutgoing.send(c.conn)
 	if err != nil {
 		return c, err
 	}
 
-	buf := make([]byte, 255)
+	buf := make([]byte, 64)
 	_, err = c.conn.Read(buf[:1])
 
-	if buf[0] != zmtpGreetOutgoing.signature[0] {
+	if buf[0] != signature[0] {
 		return c, fmt.Errorf("bad protocol signature")
 	}
 
 	_, err = c.conn.Read(buf[1:10])
 
-	if bytes.Compare(buf[0:10], zmtpGreetOutgoing.signature[:]) != 0 {
+	if bytes.Compare(buf[0:10], signature) != 0 {
 		return c, fmt.Errorf("bad protocol signature")
 	}
 
-	_, err = zmtpGreetOutgoing.sendVersion(c.conn)
-	if err != nil {
-		return c, err
-	}
-
+	// read version
 	_, err = c.conn.Read(buf[10:11])
 	if err != nil {
 		return c, err
 	}
 
-	if buf[10] != zmtpGreetOutgoing.version[0] {
+	if buf[10] < zmtpVersion {
 		return c, fmt.Errorf("bad protocol version")
 	}
 
-	if buf[11] != zmtpGreetOutgoing.version[1] {
-		return c, fmt.Errorf("bad protocol version")
+	// read socket type
+	_, err = c.conn.Read(buf[11:12])
+	if err != nil {
+		return c, err
+	}
+
+	// checking socket type, for now only accepting pull
+	if buf[11] != Pull {
+		return c, fmt.Errorf("bad protocol socket type")
+	}
+
+	// read identity flag and size
+	_, err = c.conn.Read(buf[12:14])
+	if err != nil {
+		return c, err
+	}
+
+	if buf[12] != 0 {
+		return c, fmt.Errorf("bad protocol identity")
+	}
+
+	// don't support identities
+	if buf[13] != 0 {
+		return c, fmt.Errorf("bad protocol identity size")
 	}
 
 	return c, err

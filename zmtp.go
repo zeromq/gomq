@@ -6,37 +6,21 @@ import (
 )
 
 const (
-	Push                               = 7
-	Pull                               = 8
-	zmtpVersionMajor     byte          = 3
-	zmtpVersionMinor     byte          = 0
+	Push                 byte          = 8
+	Pull                 byte          = 7
+	zmtpVersion          byte          = 1
 	zmtpHandshakeTimeout time.Duration = time.Millisecond * 100
 )
 
 type zmtpGreet struct {
-	signature [10]byte
-	version   [2]byte
-	mechanism [20]byte
-	asServer  [1]byte
-	filler    [31]byte
+	sockType byte
 }
 
-func (z *zmtpGreet) sendSignature(w io.Writer) (int, error) {
-	return w.Write(z.signature[:])
-}
+func (z *zmtpGreet) send(w io.Writer) (int, error) {
+	finalShort := byte(0x00)
+	identitySize := byte(0x00) // identity are not supported, so zero size identity
 
-func (z *zmtpGreet) sendVersion(w io.Writer) (int, error) {
-	return w.Write(z.version[:])
-}
+	greeting := []byte{0xff, 0, 0, 0, 0, 0, 0, 0, 1, 0x7f, zmtpVersion, z.sockType, finalShort, identitySize}
 
-func (z *zmtpGreet) sendMechanism(w io.Writer) (int, error) {
-	return w.Write(z.mechanism[:])
-}
-
-func (z *zmtpGreet) sendAsServer(w io.Writer) (int, error) {
-	return w.Write(z.asServer[:])
-}
-
-func (z *zmtpGreet) sendFiller(w io.Writer) (int, error) {
-	return w.Write(z.filler[:])
+	return w.Write(greeting)
 }
