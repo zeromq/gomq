@@ -101,6 +101,8 @@ func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error
 		return c, fmt.Errorf("bad protocol identity size")
 	}
 
+	go c.sendMessages(sendChan)
+
 	return c, err
 }
 
@@ -111,4 +113,18 @@ func NewPushChanneler(endpoints string) (*Channeler, error) {
 
 func (c *Channeler) Destroy() {
 	c.conn.Close()
+}
+
+func (c *Channeler) sendMessages(sendChan <-chan [][]byte) {
+	zmtpMessageOutgoing := &zmtpMessage{}
+
+	for {
+		zmtpMessageOutgoing.msg = <-sendChan
+		_, err := zmtpMessageOutgoing.send(c.conn)
+
+		if err != nil {
+			// reconnection is not handled at the moment
+			break
+		}
+	}
 }
