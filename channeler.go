@@ -12,17 +12,19 @@ var (
 )
 
 type Channeler struct {
-	conn      net.Conn
-	sockType  byte
-	endpoints string
-	subscribe string
-	SendChan  chan<- [][]byte
-	RecvChan  <-chan [][]byte
+	conn         net.Conn
+	sockType     byte
+	endpoints    string
+	subscribe    string
+	SendChan     chan<- [][]byte
+	RecvChan     <-chan [][]byte
+	sendDoneChan chan bool
 }
 
 func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error) {
 	sendChan := make(chan [][]byte)
 	recvChan := make(chan [][]byte)
+	sendDoneChan := make(chan bool)
 
 	parts := strings.Split(endpoints, "://")
 	if len(parts) != 2 {
@@ -30,11 +32,12 @@ func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error
 	}
 
 	c := &Channeler{
-		sockType:  sockType,
-		endpoints: endpoints,
-		subscribe: subscribe,
-		SendChan:  sendChan,
-		RecvChan:  recvChan,
+		sockType:     sockType,
+		endpoints:    endpoints,
+		subscribe:    subscribe,		
+		SendChan:     sendChan,
+		RecvChan:     recvChan,
+		sendDoneChan: sendDoneChan,
 	}
 
 	var err error
@@ -112,19 +115,27 @@ func NewPushChanneler(endpoints string) (*Channeler, error) {
 }
 
 func (c *Channeler) Destroy() {
+	close(c.SendChan)
+	<-c.sendDoneChan
 	c.conn.Close()
 }
 
 func (c *Channeler) sendMessages(sendChan <-chan [][]byte) {
 	zmtpMessageOutgoing := &zmtpMessage{}
+	more := true
 
-	for {
-		zmtpMessageOutgoing.msg = <-sendChan
+	for more {
+		zmtpMessageOutgoing.msg, more = <-sendChan
+		
+		if more {
 		_, err := zmtpMessageOutgoing.send(c.conn)
-
-		if err != nil {
-			// reconnection is not handled at the moment
-			break
-		}
+		
+			if err != nil {
+				// reconnection is not handled at the moment				
+				break
+			}
+		} 
 	}
+	
+	c.sendDoneChan <- true
 }
