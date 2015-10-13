@@ -20,4 +20,22 @@ func TestPushChanneler(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	push.SendChan <- [][]byte{[]byte("Hello")}
+
+	msg, more, err := pull.RecvFrame()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	text := string(msg)
+
+	if text != "Hello" {
+		t.Fatal("Wrong message")
+	}
+
+	if more != 0 {
+		t.Fatal("More flag is wrong")
+	}
 }
