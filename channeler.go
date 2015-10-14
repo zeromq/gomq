@@ -2,7 +2,6 @@ package gogozmq
 
 import (
 	"bytes"
-	"fmt"
 	"net"
 	"strings"
 )
@@ -34,7 +33,7 @@ func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error
 	c := &Channeler{
 		sockType:     sockType,
 		endpoints:    endpoints,
-		subscribe:    subscribe,		
+		subscribe:    subscribe,
 		SendChan:     sendChan,
 		RecvChan:     recvChan,
 		sendDoneChan: sendDoneChan,
@@ -46,7 +45,7 @@ func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error
 		return c, err
 	}
 
-	zmtpGreetOutgoing := &zmtpGreet{
+	zmtpGreetOutgoing := &zmtpGreeter{
 		sockType: sockType,
 	}
 
@@ -56,52 +55,25 @@ func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error
 	}
 
 	buf := make([]byte, 64)
-	_, err = c.conn.Read(buf[:1])
 
-	if buf[0] != signature[0] {
-		return c, fmt.Errorf("bad protocol signature")
-	}
-
-	_, err = c.conn.Read(buf[1:10])
-
-	if bytes.Compare(buf[0:10], signature) != 0 {
-		return c, fmt.Errorf("bad protocol signature")
-	}
-
-	// read version
-	_, err = c.conn.Read(buf[10:11])
+	err = c.verifyProtoSignature(buf)
 	if err != nil {
 		return c, err
 	}
 
-	if buf[10] < zmtpVersion {
-		return c, fmt.Errorf("bad protocol version")
-	}
-
-	// read socket type
-	_, err = c.conn.Read(buf[11:12])
+	err = c.verifyProtoVersion(buf)
 	if err != nil {
 		return c, err
 	}
 
-	// checking socket type, for now only accepting pull
-	if buf[11] != Pull {
-		return c, fmt.Errorf("bad protocol socket type")
-	}
-
-	// read identity flag and size
-	_, err = c.conn.Read(buf[12:14])
+	err = c.verifyProtoSockType(buf)
 	if err != nil {
 		return c, err
 	}
 
-	if buf[12] != 0 {
-		return c, fmt.Errorf("bad protocol identity")
-	}
-
-	// don't support identities
-	if buf[13] != 0 {
-		return c, fmt.Errorf("bad protocol identity size")
+	err = c.verifyProtoIdentity(buf)
+	if err != nil {
+		return c, err
 	}
 
 	go c.sendMessages(sendChan)
@@ -120,22 +92,103 @@ func (c *Channeler) Destroy() {
 	c.conn.Close()
 }
 
+func (c *Channeler) verifyProtoSignature(buf []byte) error {
+	n, err := c.conn.Read(buf[:1])
+	if err != nil {
+		return err
+	}
+
+	if n != 1 {
+		return ErrProtoBad
+	}
+
+	if buf[0] != signature[0] {
+		return ErrProtoBad
+	}
+
+	_, err = c.conn.Read(buf[1:10])
+	if err != nil {
+		return err
+	}
+
+	if bytes.Compare(buf[0:10], signature) != 0 {
+		return ErrProtoBad
+	}
+
+	return err
+}
+
+func (c *Channeler) verifyProtoVersion(buf []byte) error {
+	n, err := c.conn.Read(buf[10:11])
+	if err != nil {
+		return err
+	}
+
+	if n != 1 {
+		return ErrProtoBad
+	}
+
+	if buf[10] < zmtpVersion {
+		return ErrProtoBad
+	}
+
+	return nil
+}
+
+func (c *Channeler) verifyProtoSockType(buf []byte) error {
+	n, err := c.conn.Read(buf[11:12])
+	if err != nil {
+		return err
+	}
+
+	if n != 1 {
+		return ErrProtoBad
+	}
+
+	if buf[11] != Pull {
+		return ErrProtoSockType
+	}
+
+	return err
+}
+
+func (c *Channeler) verifyProtoIdentity(buf []byte) error {
+	n, err := c.conn.Read(buf[12:14])
+	if err != nil {
+		return err
+	}
+
+	if n != 2 {
+		return ErrProtoBad
+	}
+
+	if buf[12] != 0 {
+		return ErrProtoIdentity
+	}
+
+	if buf[13] != 0 {
+		return ErrProtoIdentity
+	}
+
+	return nil
+}
+
 func (c *Channeler) sendMessages(sendChan <-chan [][]byte) {
 	zmtpMessageOutgoing := &zmtpMessage{}
 	more := true
 
 	for more {
 		zmtpMessageOutgoing.msg, more = <-sendChan
-		
+
 		if more {
-		_, err := zmtpMessageOutgoing.send(c.conn)
-		
+			_, err := zmtpMessageOutgoing.send(c.conn)
+
 			if err != nil {
-				// reconnection is not handled at the moment				
+				// reconnection is not handled at the moment
 				break
 			}
-		} 
+		}
 	}
-	
+
 	c.sendDoneChan <- true
 }
