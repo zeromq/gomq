@@ -11,12 +11,11 @@ func TestPushChanneler(t *testing.T) {
 
 	pull, err := goczmq.NewPull(endpoint)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	defer pull.Destroy()
 
 	push, err := NewPushChanneler(endpoint)
-	defer push.Destroy()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,18 +23,15 @@ func TestPushChanneler(t *testing.T) {
 	push.SendChan <- [][]byte{[]byte("Hello")}
 
 	msg, more, err := pull.RecvFrame()
-
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	text := string(msg)
-
-	if text != "Hello" {
-		t.Fatal("Wrong message")
+	if want, have := "Hello", string(msg); want != have {
+		t.Error("want %#v, have %#v", want, have)
 	}
 
-	if more != 0 {
-		t.Fatal("More flag is wrong")
+	if want, have := 0, more; want != have {
+		t.Errorf("want %#v, have %#v", want, have)
 	}
 }
