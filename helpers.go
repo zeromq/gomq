@@ -86,7 +86,8 @@ func verifyProtoIdentity(conn net.Conn, buf []byte) error {
 	return nil
 }
 
-func clientHandshake(conn net.Conn, buf []byte) error {
+func clientHandshake(conn net.Conn) error {
+	buf := make([]byte, 64)
 	err := verifyProtoSignature(conn, buf)
 	if err != nil {
 		return err

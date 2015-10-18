@@ -17,40 +17,48 @@ type Sock struct {
 	conns      []net.Conn
 	currentIdx int
 	sockType   byte
-	address    string
 }
 
-func NewPushConn(address string) (Conn, error) {
+func NewPushConn(endpoints ...string) (Conn, error) {
+	var err error
 	s := Sock{
 		currentIdx: 0,
 		sockType:   Push,
-		address:    address,
 	}
 
-	addrParts := strings.Split(s.address, "://")
-	conn, err := net.Dial(addrParts[0], addrParts[1])
-	if err != nil {
-		return s, err
+	for i := 0; i < len(endpoints); i++ {
+		address := endpoints[i]
+		addrParts := strings.Split(address, "://")
+		if len(addrParts) != 2 {
+			return s, fmt.Errorf("malformed address")
+		}
+
+		conn, err := net.Dial(addrParts[0], addrParts[1])
+		if err != nil {
+			return s, err
+		}
+
+		zmtpGreetOutgoing := &zmtpGreeter{
+			sockType: s.sockType,
+		}
+
+		_, err = zmtpGreetOutgoing.send(conn)
+		if err != nil {
+			return s, err
+		}
+
+		err = clientHandshake(conn)
+		if err != nil {
+			return s, err
+		}
+
+		s.conns = append(s.conns, conn)
 	}
-	s.conns = append(s.conns, conn)
-
-	zmtpGreetOutgoing := &zmtpGreeter{
-		sockType: s.sockType,
-	}
-
-	_, err = zmtpGreetOutgoing.send(s.conns[s.currentIdx])
-	if err != nil {
-		return s, err
-	}
-
-	buf := make([]byte, 64)
-
-	err = clientHandshake(conn, buf)
 	return s, err
 }
 
 func (s Sock) Connect(endpoint string) error {
-	addrParts := strings.Split(s.address, "://")
+	addrParts := strings.Split(endpoint, "://")
 	_, err := net.Dial(addrParts[0], addrParts[1])
 	if err != nil {
 		return err
