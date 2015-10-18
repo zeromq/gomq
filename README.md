@@ -1,5 +1,6 @@
 # gogozmq
-Pure Go Implementation of a Subset of ZeroMQ
+Pure Go Implementation of a Subset of ZeroMQ.
+**Danger Will Robinson, Danger**: if this note is here, this code is highly experimental. There will be false starts, APIs will change and things will break. If you need to use ZeroMQ from Go right now, don't use this. Use [GoCZMQ](https://github.com/zeromq/goczmq) instead.
 
 ## Problems
 * Go's performance is less than optimal when calling C Code
