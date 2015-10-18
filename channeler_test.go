@@ -28,7 +28,7 @@ func TestPushChanneler(t *testing.T) {
 	}
 
 	if want, have := "Hello", string(msg); want != have {
-		t.Error("want %#v, have %#v", want, have)
+		t.Errorf("want %#v, have %#v", want, have)
 	}
 
 	if want, have := 0, more; want != have {

@@ -1,7 +1,6 @@
 package gogozmq
 
 import (
-	"bytes"
 	"net"
 	"strings"
 )
@@ -56,28 +55,8 @@ func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error
 
 	buf := make([]byte, 64)
 
-	err = c.verifyProtoSignature(buf)
-	if err != nil {
-		return c, err
-	}
-
-	err = c.verifyProtoVersion(buf)
-	if err != nil {
-		return c, err
-	}
-
-	err = c.verifyProtoSockType(buf)
-	if err != nil {
-		return c, err
-	}
-
-	err = c.verifyProtoIdentity(buf)
-	if err != nil {
-		return c, err
-	}
-
+	err = clientHandshake(c.conn, buf)
 	go c.sendMessages(sendChan)
-
 	return c, err
 }
 
@@ -90,87 +69,6 @@ func (c *Channeler) Destroy() {
 	close(c.SendChan)
 	<-c.sendDoneChan
 	c.conn.Close()
-}
-
-func (c *Channeler) verifyProtoSignature(buf []byte) error {
-	n, err := c.conn.Read(buf[:1])
-	if err != nil {
-		return err
-	}
-
-	if n != 1 {
-		return ErrProtoBad
-	}
-
-	if buf[0] != signature[0] {
-		return ErrProtoBad
-	}
-
-	_, err = c.conn.Read(buf[1:10])
-	if err != nil {
-		return err
-	}
-
-	if bytes.Compare(buf[0:10], signature) != 0 {
-		return ErrProtoBad
-	}
-
-	return err
-}
-
-func (c *Channeler) verifyProtoVersion(buf []byte) error {
-	n, err := c.conn.Read(buf[10:11])
-	if err != nil {
-		return err
-	}
-
-	if n != 1 {
-		return ErrProtoBad
-	}
-
-	if buf[10] < zmtpVersion {
-		return ErrProtoBad
-	}
-
-	return nil
-}
-
-func (c *Channeler) verifyProtoSockType(buf []byte) error {
-	n, err := c.conn.Read(buf[11:12])
-	if err != nil {
-		return err
-	}
-
-	if n != 1 {
-		return ErrProtoBad
-	}
-
-	if buf[11] != Pull {
-		return ErrProtoSockType
-	}
-
-	return err
-}
-
-func (c *Channeler) verifyProtoIdentity(buf []byte) error {
-	n, err := c.conn.Read(buf[12:14])
-	if err != nil {
-		return err
-	}
-
-	if n != 2 {
-		return ErrProtoBad
-	}
-
-	if buf[12] != 0 {
-		return ErrProtoIdentity
-	}
-
-	if buf[13] != 0 {
-		return ErrProtoIdentity
-	}
-
-	return nil
 }
 
 func (c *Channeler) sendMessages(sendChan <-chan [][]byte) {

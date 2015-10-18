@@ -2,6 +2,7 @@ package gogozmq
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"time"
 )
@@ -55,6 +56,10 @@ func (z *zmtpGreeter) send(w io.Writer) (int, error) {
 
 func (z *zmtpMessage) send(w io.Writer) (int, error) {
 	payloadSize := len(z.msg[0])
+	if payloadSize > 255 {
+		return 0, fmt.Errorf("long messages not supported")
+	}
+
 	envelopeSize := shortMessageEnvelopeSize + payloadSize
 
 	// only support single part and short message (under 255 bytes)
@@ -66,6 +71,5 @@ func (z *zmtpMessage) send(w io.Writer) (int, error) {
 	if payloadSize > 0 {
 		copy(envelope[2:], z.msg[0])
 	}
-
 	return w.Write(envelope)
 }

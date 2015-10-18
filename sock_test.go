@@ -7,22 +7,22 @@ import (
 )
 
 func TestPushSockShortMessage(t *testing.T) {
-	endpoint := "tcp://127.0.0.1:9999"
+	endpoint1 := "tcp://127.0.0.1:9998"
 
-	pull, err := goczmq.NewPull(endpoint)
+	pull1, err := goczmq.NewPull(endpoint1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pull.Destroy()
+	defer pull1.Destroy()
 
-	push, err := NewPush(endpoint)
+	push, err := NewPushConn(endpoint1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	push.Write([]byte("Hello"))
 
-	msg, more, err := pull.RecvFrame()
+	msg, more, err := pull1.RecvFrame()
 	if err != nil {
 		t.Fatal(err)
 	}
