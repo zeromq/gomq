@@ -53,9 +53,7 @@ func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error
 		return c, err
 	}
 
-	buf := make([]byte, 64)
-
-	err = clientHandshake(c.conn, buf)
+	err = clientHandshake(c.conn)
 	go c.sendMessages(sendChan)
 	return c, err
 }
