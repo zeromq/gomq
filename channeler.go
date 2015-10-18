@@ -44,16 +44,14 @@ func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error
 		return c, err
 	}
 
-	zmtpGreetOutgoing := &zmtpGreeter{
+	zmtpGreetOutgoing := &greeter{
 		sockType: sockType,
 	}
 
-	_, err = zmtpGreetOutgoing.send(c.conn)
+	err = zmtpGreetOutgoing.greet(c.conn)
 	if err != nil {
 		return c, err
 	}
-
-	err = clientHandshake(c.conn)
 	go c.sendMessages(sendChan)
 	return c, err
 }
@@ -70,7 +68,7 @@ func (c *Channeler) Destroy() {
 }
 
 func (c *Channeler) sendMessages(sendChan <-chan [][]byte) {
-	zmtpMessageOutgoing := &zmtpMessage{}
+	zmtpMessageOutgoing := &message{}
 	more := true
 
 	for more {

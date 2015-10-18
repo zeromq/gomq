@@ -38,16 +38,11 @@ func NewPushConn(endpoints ...string) (Conn, error) {
 			return s, err
 		}
 
-		zmtpGreetOutgoing := &zmtpGreeter{
+		zmtpGreetOutgoing := &greeter{
 			sockType: s.sockType,
 		}
 
-		_, err = zmtpGreetOutgoing.send(conn)
-		if err != nil {
-			return s, err
-		}
-
-		err = clientHandshake(conn)
+		err = zmtpGreetOutgoing.greet(conn)
 		if err != nil {
 			return s, err
 		}
@@ -75,7 +70,7 @@ func (s Sock) Read(b []byte) (n int, err error) {
 }
 
 func (s Sock) Write(b []byte) (n int, err error) {
-	zmtpMessageOutgoing := &zmtpMessage{}
+	zmtpMessageOutgoing := &message{}
 	zmtpMessageOutgoing.msg = [][]byte{b}
 	n, err = zmtpMessageOutgoing.send(s.conns[s.currentIdx])
 	s.currentIdx++
