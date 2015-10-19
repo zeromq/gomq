@@ -1,33 +1,23 @@
 package gogozmq
 
-import (
-	"net"
-	"strings"
-)
-
 var (
 	signature = []byte{0xff, 0, 0, 0, 0, 0, 0, 0, 1, 0x7f}
 )
 
 type Channeler struct {
-	conn         net.Conn
+	conn         Conn
 	sockType     byte
 	endpoints    string
 	subscribe    string
-	SendChan     chan<- [][]byte
-	RecvChan     <-chan [][]byte
+	SendChan     chan<- []byte
+	RecvChan     <-chan []byte
 	sendDoneChan chan bool
 }
 
 func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error) {
-	sendChan := make(chan [][]byte)
-	recvChan := make(chan [][]byte)
+	sendChan := make(chan []byte)
+	recvChan := make(chan []byte)
 	sendDoneChan := make(chan bool)
-
-	parts := strings.Split(endpoints, "://")
-	if len(parts) != 2 {
-		panic("endpoint should have 2 parts")
-	}
 
 	c := &Channeler{
 		sockType:     sockType,
@@ -39,19 +29,11 @@ func newChanneler(sockType byte, endpoints, subscribe string) (*Channeler, error
 	}
 
 	var err error
-	c.conn, err = net.Dial(parts[0], parts[1])
+	c.conn, err = NewPushConn(endpoints)
 	if err != nil {
 		return c, err
 	}
 
-	zmtpGreetOutgoing := &greeter{
-		sockType: sockType,
-	}
-
-	err = zmtpGreetOutgoing.greet(c.conn)
-	if err != nil {
-		return c, err
-	}
 	go c.sendMessages(sendChan)
 	return c, err
 }
@@ -67,15 +49,14 @@ func (c *Channeler) Destroy() {
 	c.conn.Close()
 }
 
-func (c *Channeler) sendMessages(sendChan <-chan [][]byte) {
-	zmtpMessageOutgoing := &message{}
+func (c *Channeler) sendMessages(sendChan <-chan []byte) {
 	more := true
-
+	var msg []byte
 	for more {
-		zmtpMessageOutgoing.msg, more = <-sendChan
+		msg, more = <-sendChan
 
 		if more {
-			_, err := zmtpMessageOutgoing.send(c.conn)
+			_, err := c.conn.Write(msg)
 
 			if err != nil {
 				// reconnection is not handled at the moment
