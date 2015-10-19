@@ -20,7 +20,7 @@ func TestPushChanneler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	push.SendChan <- [][]byte{[]byte("Hello")}
+	push.SendChan <- []byte("Hello")
 
 	msg, more, err := pull.RecvFrame()
 	if err != nil {
