@@ -3,24 +3,29 @@ package zeromq
 import "testing"
 
 func TestClientServer(t *testing.T) {
-	server, err := NewServer("tcp://127.0.0.1:9999")
-	if want, have := ErrNotImplemented, err; want != have {
-		t.Errorf("want %q, got %q")
+
+	server, err := NewServer("tcp://127.0.0.1:9999", NewSecurityNull())
+	if err != nil {
+		t.Error(err)
 	}
 
-	client, err := NewClient("tcp://127.0.0.1:9999")
-	if want, have := ErrNotImplemented, err; want != have {
-		t.Errorf("want %q, got %q")
+	client, err := NewClient("tcp://127.0.0.1:9999", NewSecurityNull())
+	if err != nil {
+		t.Error(err)
 	}
 
 	err = client.Send([]byte("hello"))
-	if want, have := ErrNotImplemented, err; want != have {
-		t.Errorf("want %q, got %q")
+	if err != nil {
+		t.Error(err)
 	}
 
-	_, err = server.Recv()
-	if want, have := ErrNotImplemented, err; want != have {
-		t.Errorf("want %q, got %q")
+	msg, err := server.Recv()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if want, have := "hello", string(msg); want != have {
+		t.Errorf("want %q, have %q", want, have)
 	}
 
 }
