@@ -2,30 +2,48 @@ package zeromq
 
 import "testing"
 
+func TestNewServer(t *testing.T) {
+	server, err := NewServer(NewSecurityNull())
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = server.Connect("tcp://127.0.0.1:9999")
+	if err != ErrInvalidSockAction {
+		t.Error(err)
+	}
+}
+
+func TestNewClient(t *testing.T) {
+	client, err := NewClient(NewSecurityNull())
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = client.Bind("tcp://127.0.0.1:9999")
+	if err != ErrInvalidSockAction {
+		t.Error(err)
+	}
+}
+
 func TestClientServer(t *testing.T) {
-
-	server, err := NewServer("tcp://127.0.0.1:9999", NewSecurityNull())
+	server, err := NewServer(NewSecurityNull())
 	if err != nil {
 		t.Error(err)
 	}
 
-	client, err := NewClient("tcp://127.0.0.1:9999", NewSecurityNull())
+	err = server.Bind("tcp://127.0.0.1:9999")
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = client.Send([]byte("hello"))
+	client, err := NewClient(NewSecurityNull())
 	if err != nil {
 		t.Error(err)
 	}
 
-	msg, err := server.Recv()
+	_, err = client.Connect("tcp://127.0.0.1:9998")
 	if err != nil {
 		t.Error(err)
 	}
-
-	if want, have := "hello", string(msg); want != have {
-		t.Errorf("want %q, have %q", want, have)
-	}
-
 }
