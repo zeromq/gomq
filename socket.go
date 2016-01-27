@@ -17,15 +17,15 @@ var (
 	ClientSocketType = zmtp.ClientSocketType
 	ServerSocketType = zmtp.ServerSocketType
 
-	NullSecurityMechanism  = zmtp.NullSecurityMechanismType
-	PlainSecurityMechanism = zmtp.PlainSecurityMechanismType
-	CurveSecurityMechanism = zmtp.CurveSecurityMechanismType
+	NullSecurityMechanismType  = zmtp.NullSecurityMechanismType
+	PlainSecurityMechanismType = zmtp.PlainSecurityMechanismType
+	CurveSecurityMechanismTyp  = zmtp.CurveSecurityMechanismType
 
 	ErrNotImplemented = errors.New("not implemented")
 )
 
 func NewSecurityNull() *zmtp.SecurityNull {
-	return &zmtp.SecurityNull{}
+	return zmtp.NewSecurityNull()
 }
 
 func NewSocket(socktype zmtp.SocketType, endpoint string, mechanism zmtp.SecurityMechanism) (Socket, error) {
