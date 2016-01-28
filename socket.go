@@ -35,44 +35,52 @@ type Socket interface {
 	Send([]byte) error
 	Connect(endpoint string) error
 	Bind(endpoint string) (net.Addr, error)
+	SetRetry(retry time.Duration)
+	GetRetry() time.Duration
 }
 
 type socket struct {
 	sockType      zmtp.SocketType
-	isServer      bool
+	asServer      bool
 	conns         []*Connection
 	retryInterval time.Duration
 	lock          sync.Mutex
+	mechanism     zmtp.SecurityMechanism
 }
 
-func NewSocket(sockType zmtp.SocketType, isServer bool, mechanism zmtp.SecurityMechanism) Socket {
+func NewSocket(sockType zmtp.SocketType, asServer bool, mechanism zmtp.SecurityMechanism) Socket {
 	return &socket{
-		isServer:      isServer,
+		asServer:      asServer,
 		sockType:      sockType,
 		retryInterval: defaultRetry,
+		mechanism:     mechanism,
 		conns:         make([]*Connection, 0),
 	}
 }
 
 func (s *socket) Connect(endpoint string) error {
-	if s.isServer {
+	if s.asServer {
 		return ErrInvalidSockAction
 	}
 
 	parts := strings.Split(endpoint, "://")
 
-	log.Printf("connecting with %q on %q", parts[0], parts[1])
-
 Connect:
 	netconn, err := net.Dial(parts[0], parts[1])
 	if err != nil {
-		time.Sleep(s.retryInterval)
+		time.Sleep(s.GetRetry())
 		goto Connect
+	}
+
+	zmtpconn := zmtp.NewConnection(netconn)
+	err = zmtpconn.Prepare(s.mechanism, s.sockType, s.asServer)
+	if err != nil {
+		return err
 	}
 
 	conn := &Connection{
 		netconn:  netconn,
-		zmtpconn: zmtp.NewConnection(netconn),
+		zmtpconn: zmtpconn,
 	}
 
 	s.conns = append(s.conns, conn)
@@ -82,7 +90,7 @@ Connect:
 func (s *socket) Bind(endpoint string) (net.Addr, error) {
 	var addr net.Addr
 
-	if !s.isServer {
+	if !s.asServer {
 		return addr, ErrInvalidSockAction
 	}
 
@@ -100,13 +108,27 @@ func (s *socket) Bind(endpoint string) (net.Addr, error) {
 		return addr, err
 	}
 
+	zmtpconn := zmtp.NewConnection(netconn)
+	err = zmtpconn.Prepare(s.mechanism, s.sockType, s.asServer)
+	if err != nil {
+		return netconn.LocalAddr(), err
+	}
+
 	conn := &Connection{
 		netconn:  netconn,
-		zmtpconn: zmtp.NewConnection(netconn),
+		zmtpconn: zmtpconn,
 	}
 
 	s.conns = append(s.conns, conn)
 	return netconn.LocalAddr(), nil
+}
+
+func (s *socket) GetRetry() time.Duration {
+	return s.retryInterval
+}
+
+func (s *socket) SetRetry(r time.Duration) {
+	s.retryInterval = r
 }
 
 func NewSecurityNull() *zmtp.SecurityNull {
