@@ -21,6 +21,8 @@ var (
 
 	ErrNotImplemented    = errors.New("not implemented")
 	ErrInvalidSockAction = errors.New("action not valid on this socket")
+
+	defaultRetry = 250 * time.Millisecond
 )
 
 type Connection struct {
@@ -45,9 +47,10 @@ type socket struct {
 
 func NewSocket(sockType zmtp.SocketType, isServer bool, mechanism zmtp.SecurityMechanism) Socket {
 	return &socket{
-		isServer: isServer,
-		sockType: sockType,
-		conns:    make([]*Connection, 0),
+		isServer:      isServer,
+		sockType:      sockType,
+		retryInterval: defaultRetry,
+		conns:         make([]*Connection, 0),
 	}
 }
 
@@ -60,9 +63,11 @@ func (s *socket) Connect(endpoint string) error {
 
 	log.Printf("connecting with %q on %q", parts[0], parts[1])
 
+Connect:
 	netconn, err := net.Dial(parts[0], parts[1])
 	if err != nil {
-		return err
+		time.Sleep(s.retryInterval)
+		goto Connect
 	}
 
 	conn := &Connection{
