@@ -2,7 +2,6 @@ package zeromq
 
 import (
 	"errors"
-	"log"
 	"net"
 	"strings"
 	"sync"
@@ -95,8 +94,6 @@ func (s *socket) Bind(endpoint string) (net.Addr, error) {
 	}
 
 	parts := strings.Split(endpoint, "://")
-
-	log.Printf("listening for %q on %q", parts[0], parts[1])
 
 	ln, err := net.Listen(parts[0], parts[1])
 	if err != nil {
