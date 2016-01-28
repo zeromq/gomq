@@ -1,48 +1,30 @@
 package zeromq
 
-import "testing"
-
-func TestNewServer(t *testing.T) {
-	server, err := NewServer(NewSecurityNull())
-	if err != nil {
-		t.Error(err)
-	}
-
-	_, err = server.Connect("tcp://127.0.0.1:9999")
-	if err != ErrInvalidSockAction {
-		t.Error(err)
-	}
-}
+import (
+	"net"
+	"testing"
+	"time"
+)
 
 func TestNewClient(t *testing.T) {
-	client, err := NewClient(NewSecurityNull())
-	if err != nil {
-		t.Error(err)
-	}
+	t.Log("attempting to create server...")
 
-	err = client.Bind("tcp://127.0.0.1:9999")
-	if err != ErrInvalidSockAction {
-		t.Error(err)
-	}
-}
+	var addr net.Addr
+	var err error
 
-func TestClientServer(t *testing.T) {
-	server, err := NewServer(NewSecurityNull())
-	if err != nil {
-		t.Error(err)
-	}
+	go func() {
+		server := NewServer(NewSecurityNull())
+		addr, err = server.Bind("tcp://127.0.0.1:9999")
+		t.Logf("NETADDR: %q", addr.String())
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
-	err = server.Bind("tcp://127.0.0.1:9999")
-	if err != nil {
-		t.Error(err)
-	}
+	time.Sleep(100)
 
-	client, err := NewClient(NewSecurityNull())
-	if err != nil {
-		t.Error(err)
-	}
-
-	_, err = client.Connect("tcp://127.0.0.1:9998")
+	client := NewClient(NewSecurityNull())
+	err = client.Connect("tcp://127.0.0.1:9999")
 	if err != nil {
 		t.Error(err)
 	}
