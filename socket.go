@@ -72,7 +72,7 @@ Connect:
 	}
 
 	zmtpconn := zmtp.NewConnection(netconn)
-	err = zmtpconn.Prepare(s.mechanism, s.sockType, s.asServer)
+	_, err = zmtpconn.Prepare(s.mechanism, s.sockType, s.asServer, nil)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (s *socket) Bind(endpoint string) (net.Addr, error) {
 	}
 
 	zmtpconn := zmtp.NewConnection(netconn)
-	err = zmtpconn.Prepare(s.mechanism, s.sockType, s.asServer)
+	_, err = zmtpconn.Prepare(s.mechanism, s.sockType, s.asServer, nil)
 	if err != nil {
 		return netconn.LocalAddr(), err
 	}
