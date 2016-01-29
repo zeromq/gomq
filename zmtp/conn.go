@@ -14,6 +14,7 @@ type Connection struct {
 	securityMechanism SecurityMechanism
 	socket            Socket
 	isPrepared        bool
+	asServer, otherEndAsServer bool
 }
 
 type SocketType string
@@ -37,30 +38,30 @@ func (c *Connection) Prepare(mechanism SecurityMechanism, socketType SocketType,
 
 	var err error
 	if c.socket, err = NewSocket(socketType); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("zmqgo/zmtp: Got error while creating socket: %v", err)
 	}
 
 	// Send/recv greeting
 	if err := c.sendGreeting(asServer); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("zmqgo/zmtp: Got error while sending greeting: %v", err)
 	}
 	if err := c.recvGreeting(asServer); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("zmqgo/zmtp: Got error while receiving greeting: %v", err)
 	}
 
 	// Do security handshake
 	if err := mechanism.Handshake(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("zmqgo/zmtp: Got error while running the security handshake: %v", err)
 	}
 
 	// Send/recv metadata
 	if err := c.sendMetadata(socketType, applicationMetadata); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("zmqgo/zmtp: Got error while sending metadata: %v", err)
 	}
 
 	otherEndApplicationMetaData, err := c.recvMetadata()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("zmqgo/zmtp: Got error while receiving metadata: %v", err)
 	}
 
 	return otherEndApplicationMetaData, nil
@@ -68,12 +69,12 @@ func (c *Connection) Prepare(mechanism SecurityMechanism, socketType SocketType,
 
 func (c *Connection) sendGreeting(asServer bool) error {
 	greeting := greeting{
-		Signature:  signature,
+		SignaturePrefix: signaturePrefix,
+		SignatureSuffix: signatureSuffix,
 		Version:    version,
-		ServerFlag: toByteBool(asServer),
 	}
-
 	toNullPaddedString(string(c.securityMechanism.Type()), greeting.Mechanism[:])
+
 	if err := binary.Write(c.rw, byteOrder, &greeting); err != nil {
 		return err
 	}
@@ -83,12 +84,17 @@ func (c *Connection) sendGreeting(asServer bool) error {
 
 func (c *Connection) recvGreeting(asServer bool) error {
 	var greeting greeting
+
 	if err := binary.Read(c.rw, byteOrder, &greeting); err != nil {
-		return err
+		return fmt.Errorf("Error while reading: %v", err)
 	}
 
-	if greeting.Signature != signature {
-		return errors.New("Signature received does not correspond with expected signature")
+	if greeting.SignaturePrefix != signaturePrefix {
+		return fmt.Errorf("Signature prefix received does not correspond with expected signature. Received: %#v. Expected: %#v.", greeting.SignaturePrefix, signaturePrefix)
+	}
+
+	if greeting.SignatureSuffix != signatureSuffix {
+		return fmt.Errorf("Signature prefix received does not correspond with expected signature. Received: %#v. Expected: %#v.", greeting.SignatureSuffix, signatureSuffix)
 	}
 
 	if greeting.Version != version {
@@ -101,15 +107,11 @@ func (c *Connection) recvGreeting(asServer bool) error {
 		return fmt.Errorf("Encryption mechanism on other side %q does not match this side's %q", otherMechanism, thisMechanism)
 	}
 
-	if otherSideAsServer, err := fromByteBool(greeting.ServerFlag); err != nil {
+	otherEndAsServer, err := fromByteBool(greeting.ServerFlag)
+	if err != nil {
 		return err
-	} else if asServer == otherSideAsServer {
-		if asServer {
-			return errors.New("Both ends of the connection are registering as server")
-		} else {
-			return errors.New("Both ends of the connection are registering as client")
-		}
 	}
+	c.otherEndAsServer = otherEndAsServer
 
 	return nil
 }

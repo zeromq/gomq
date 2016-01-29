@@ -8,13 +8,17 @@ const (
 )
 
 const (
+	signaturePrefix = 0xFF
+	signatureSuffix = 0x7F
+)
+
+const (
 	hasMoreBitFlag   = 0x1
 	isLongBitFlag    = 0x2
 	isCommandBitFlag = 0x4
 )
 
 var (
-	signature = [10]byte{0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0x7F}
 	version   = [2]uint8{majorVersion, minorVersion}
 )
 
@@ -30,7 +34,9 @@ const maxInt64 = int64(maxUint64 >> 1)
 const minInt64 = -maxInt64 - 1
 
 type greeting struct {
-	Signature  [10]byte
+	SignaturePrefix byte
+	_ [8]byte
+	SignatureSuffix byte
 	Version    [2]uint8
 	Mechanism  [20]byte
 	ServerFlag byte
