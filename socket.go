@@ -45,6 +45,9 @@ type socket struct {
 	retryInterval time.Duration
 	lock          sync.Mutex
 	mechanism     zmtp.SecurityMechanism
+	cmdChan       <-chan *zmtp.Command
+	msgChan       <-chan []byte
+	errChan       <-chan error
 }
 
 func NewSocket(sockType zmtp.SocketType, asServer bool, mechanism zmtp.SecurityMechanism) Socket {
@@ -76,6 +79,8 @@ Connect:
 	if err != nil {
 		return err
 	}
+
+	s.msgChan, s.cmdChan, s.errChan = zmtpconn.Recv()
 
 	conn := &Connection{
 		netconn:  netconn,
@@ -111,6 +116,8 @@ func (s *socket) Bind(endpoint string) (net.Addr, error) {
 		return netconn.LocalAddr(), err
 	}
 
+	s.msgChan, s.cmdChan, s.errChan = zmtpconn.Recv()
+
 	conn := &Connection{
 		netconn:  netconn,
 		zmtpconn: zmtpconn,
@@ -141,10 +148,9 @@ func NewServer(mechanism zmtp.SecurityMechanism) Socket {
 }
 
 func (s *socket) Recv() ([]byte, error) {
-	var msg []byte
-	return msg, ErrNotImplemented
+	return <-s.msgChan, nil
 }
 
-func (s *socket) Send([]byte) error {
-	return ErrNotImplemented
+func (s *socket) Send(b []byte) error {
+	return s.conns[0].zmtpconn.SendFrame(b)
 }
