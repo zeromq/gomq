@@ -1,4 +1,4 @@
-package zeromq
+package zmqgo
 
 import (
 	"errors"
