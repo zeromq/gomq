@@ -1,4 +1,4 @@
-package zmqgo
+package gomq
 
 import (
 	"bytes"
@@ -75,4 +75,11 @@ func TestExternalServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	msg, _ := client.Recv()
+
+	if want, got := 0, bytes.Compare([]byte("WORLD"), msg); want != got {
+		t.Errorf("want %v, got %v", want, got)
+	}
+
 }
