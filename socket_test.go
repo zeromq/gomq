@@ -17,6 +17,11 @@ func TestNewClient(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+
+		err := client.Send([]byte("HELLO"))
+		if err != nil {
+			t.Error(err)
+		}
 	}()
 
 	server := NewServer(NewSecurityNull())
@@ -25,4 +30,7 @@ func TestNewClient(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	msg, _ := server.Recv()
+	t.Logf("%s", string(msg))
 }
