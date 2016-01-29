@@ -1,4 +1,4 @@
-package zmqgo
+package gomq
 
 import (
 	"bytes"
