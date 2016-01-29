@@ -7,23 +7,20 @@ func toNullPaddedString(str string, dst []byte) {
 		panic(fmt.Sprintf("Null padded string of length %v cannot accomodate content of length %v", len(str), len(str)))
 	}
 
-	copy(dst[len(dst)-len(str):], []byte(str))
+	copy(dst, str)
 }
 
 func fromNullPaddedString(slice []byte) string {
-	contentIndex := -1
-	for i, b := range slice {
-		if b != 0x00 {
-			contentIndex = i
+	str := ""
+	for _, b := range slice {
+		if b == 0 {
 			break
 		}
+
+		str += string(b)
 	}
 
-	if contentIndex == -1 {
-		return ""
-	}
-
-	return string(slice[contentIndex:])
+	return str
 }
 
 func toByteBool(b bool) byte {
