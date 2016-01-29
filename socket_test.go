@@ -1,13 +1,12 @@
 package zeromq
 
 import (
+	"bytes"
 	"net"
 	"testing"
 )
 
 func TestNewClient(t *testing.T) {
-	t.Log("attempting to create server...")
-
 	var addr net.Addr
 	var err error
 
@@ -22,15 +21,41 @@ func TestNewClient(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+
+		msg, _ := client.Recv()
+		if want, got := 0, bytes.Compare([]byte("WORLD"), msg); want != got {
+			t.Errorf("want %v, got %v", want, got)
+		}
+
+		err = client.Send([]byte("GOODBYE"))
+		if err != nil {
+			t.Error(err)
+		}
 	}()
 
 	server := NewServer(NewSecurityNull())
+
 	addr, err = server.Bind("tcp://127.0.0.1:9999")
-	t.Logf("NETADDR: %q", addr.String())
+
+	if want, got := "127.0.0.1:9999", addr.String(); want != got {
+		t.Errorf("want %q, got %q", want, got)
+	}
+
 	if err != nil {
 		t.Error(err)
 	}
 
 	msg, _ := server.Recv()
-	t.Logf("%s", string(msg))
+
+	if want, got := 0, bytes.Compare([]byte("HELLO"), msg); want != got {
+		t.Errorf("want %v, got %v", want, got)
+	}
+
+	server.Send([]byte("WORLD"))
+
+	msg, _ = server.Recv()
+
+	if want, got := 0, bytes.Compare([]byte("GOODBYE"), msg); want != got {
+		t.Errorf("want %v, got %v", want, got)
+	}
 }
