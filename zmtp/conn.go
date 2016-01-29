@@ -303,8 +303,19 @@ func (c *Connection) Recv() (<-chan []byte, <-chan *Command, <-chan error) {
 					return
 				}
 
-				// Read out the command name itself
-				commandOut <- command
+				// Check what type of command we got
+				// Certain commands we deal with directly, the rest we send over to the application
+				switch command.Name {
+				case "PING":
+					// When we get a ping, we want to send back a pong, we don't really care about the contents right now
+					if err := c.SendCommand("PONG", nil); err != nil {
+						errorOut <- err
+						return
+					}
+				default:
+					commandOut <- command
+				}
+
 			}
 		}
 	}()
