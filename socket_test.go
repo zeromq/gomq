@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"net"
 	"testing"
+
+	"github.com/zeromq/zmqgo/internal/test"
 )
 
 func TestNewClient(t *testing.T) {
@@ -57,5 +59,20 @@ func TestNewClient(t *testing.T) {
 
 	if want, got := 0, bytes.Compare([]byte("GOODBYE"), msg); want != got {
 		t.Errorf("want %v, got %v", want, got)
+	}
+}
+
+func TestExternalServer(t *testing.T) {
+	go test.StartExternalServer()
+
+	client := NewClient(NewSecurityNull())
+	err := client.Connect("tcp://127.0.0.1:31337")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = client.Send([]byte("HELLO"))
+	if err != nil {
+		t.Fatal(err)
 	}
 }
