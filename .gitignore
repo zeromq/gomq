@@ -22,3 +22,7 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+#IntelliJ files
+/.idea
+/*.iml
