@@ -10,10 +10,10 @@ import (
 )
 
 type Connection struct {
-	rw                io.ReadWriter
-	securityMechanism SecurityMechanism
-	socket            Socket
-	isPrepared        bool
+	rw                         io.ReadWriter
+	securityMechanism          SecurityMechanism
+	socket                     Socket
+	isPrepared                 bool
 	asServer, otherEndAsServer bool
 }
 
@@ -38,30 +38,30 @@ func (c *Connection) Prepare(mechanism SecurityMechanism, socketType SocketType,
 
 	var err error
 	if c.socket, err = NewSocket(socketType); err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while creating socket: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while creating socket: %v", err)
 	}
 
 	// Send/recv greeting
 	if err := c.sendGreeting(asServer); err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while sending greeting: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while sending greeting: %v", err)
 	}
 	if err := c.recvGreeting(asServer); err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while receiving greeting: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while receiving greeting: %v", err)
 	}
 
 	// Do security handshake
 	if err := mechanism.Handshake(); err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while running the security handshake: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while running the security handshake: %v", err)
 	}
 
 	// Send/recv metadata
 	if err := c.sendMetadata(socketType, applicationMetadata); err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while sending metadata: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while sending metadata: %v", err)
 	}
 
 	otherEndApplicationMetaData, err := c.recvMetadata()
 	if err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while receiving metadata: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while receiving metadata: %v", err)
 	}
 
 	return otherEndApplicationMetaData, nil
@@ -71,7 +71,7 @@ func (c *Connection) sendGreeting(asServer bool) error {
 	greeting := greeting{
 		SignaturePrefix: signaturePrefix,
 		SignatureSuffix: signatureSuffix,
-		Version:    version,
+		Version:         version,
 	}
 	toNullPaddedString(string(c.securityMechanism.Type()), greeting.Mechanism[:])
 
