@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zeromq/zmqgo/zmtp"
+	"github.com/zeromq/gomq/zmtp"
 )
 
 var (
