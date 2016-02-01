@@ -4,6 +4,6 @@ warnings_are_errors: false
 go:
         - 1.5
 install:
-        - go get github.com/zeromq/gozmtp
+        - go get github.com/zeromq/gomq
 script:
         - go test -v .
