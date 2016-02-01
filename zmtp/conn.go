@@ -274,25 +274,24 @@ func (c *Connection) send(isCommand bool, body []byte) error {
 	return nil
 }
 
-// Recv starts listening to the ReadWriter and passes *Message, *Command and
-// *Error messages to channels
-func (c *Connection) Recv(messageOut chan<- *Message, commandOut chan<- *Command, errorOut chan<- *Error) {
+// Recv starts listening to the ReadWriter and passes *Message to a channel
+func (c *Connection) Recv(messageOut chan<- *Message) {
 	go func() {
 		for {
 			// Actually read out the body and send it over the channel now
 			isCommand, body, err := c.read()
 			if err != nil {
-				errorOut <- &Error{Error: err}
+				messageOut <- &Message{Err: err, MessageType: ErrorMessage}
 				return
 			}
 
 			if !isCommand {
 				// Data frame
-				messageOut <- &Message{Body: body}
+				messageOut <- &Message{Body: body, MessageType: UserMessage}
 			} else {
 				command, err := c.parseCommand(body)
 				if err != nil {
-					errorOut <- &Error{Error: err}
+					messageOut <- &Message{Err: err, MessageType: ErrorMessage}
 					return
 				}
 
@@ -302,11 +301,11 @@ func (c *Connection) Recv(messageOut chan<- *Message, commandOut chan<- *Command
 				case "PING":
 					// When we get a ping, we want to send back a pong, we don't really care about the contents right now
 					if err := c.SendCommand("PONG", nil); err != nil {
-						errorOut <- &Error{Error: err}
+						messageOut <- &Message{Err: err, MessageType: ErrorMessage}
 						return
 					}
 				default:
-					commandOut <- &Command{Name: command.Name, Body: command.Body}
+					messageOut <- &Message{Name: command.Name, Body: command.Body, MessageType: ErrorMessage}
 				}
 
 			}
