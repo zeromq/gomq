@@ -18,6 +18,14 @@ const (
 	isCommandBitFlag = 0x4
 )
 
+type MessageType int
+
+const (
+	UserMessage MessageType = iota
+	CommandMessage
+	ErrorMessage
+)
+
 var (
 	version = [2]uint8{majorVersion, minorVersion}
 )
@@ -50,11 +58,9 @@ type Command struct {
 }
 
 type Message struct {
-	Index int
-	Body  []byte
-}
-
-type Error struct {
-	Index int
-	Error error
+	Index       int
+	Name        string
+	Body        []byte
+	Err         error
+	MessageType MessageType
 }
