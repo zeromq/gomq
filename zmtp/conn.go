@@ -276,7 +276,7 @@ func (c *Connection) send(isCommand bool, body []byte) error {
 
 // Recv starts listening to the ReadWriter and passes *Message, *Command and
 // *Error messages to channels
-func (c *Connection) Recv(messageOut chan *Message, commandOut chan *Command, errorOut chan *Error) {
+func (c *Connection) Recv(messageOut chan<- *Message, commandOut chan<- *Command, errorOut chan<- *Error) {
 	go func() {
 		for {
 			// Actually read out the body and send it over the channel now
