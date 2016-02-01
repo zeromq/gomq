@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	version   = [2]uint8{majorVersion, minorVersion}
+	version = [2]uint8{majorVersion, minorVersion}
 )
 
 var byteOrder = binary.BigEndian
@@ -35,15 +35,26 @@ const minInt64 = -maxInt64 - 1
 
 type greeting struct {
 	SignaturePrefix byte
-	_ [8]byte
+	_               [8]byte
 	SignatureSuffix byte
-	Version    [2]uint8
-	Mechanism  [20]byte
-	ServerFlag byte
-	_          [31]byte
+	Version         [2]uint8
+	Mechanism       [20]byte
+	ServerFlag      byte
+	_               [31]byte
 }
 
 type Command struct {
-	Name string
-	Body []byte
+	Index int
+	Name  string
+	Body  []byte
+}
+
+type Message struct {
+	Index int
+	Body  []byte
+}
+
+type Error struct {
+	Index int
+	Error error
 }

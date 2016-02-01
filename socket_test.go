@@ -29,6 +29,8 @@ func TestNewClient(t *testing.T) {
 			t.Errorf("want %v, got %v", want, got)
 		}
 
+		t.Logf("client received: %q", string(msg))
+
 		err = client.Send([]byte("GOODBYE"))
 		if err != nil {
 			t.Error(err)
@@ -53,6 +55,8 @@ func TestNewClient(t *testing.T) {
 		t.Errorf("want %v, got %v", want, got)
 	}
 
+	t.Logf("server received: %q", string(msg))
+
 	server.Send([]byte("WORLD"))
 
 	msg, _ = server.Recv()
@@ -60,6 +64,8 @@ func TestNewClient(t *testing.T) {
 	if want, got := 0, bytes.Compare([]byte("GOODBYE"), msg); want != got {
 		t.Errorf("want %v, got %v", want, got)
 	}
+
+	t.Logf("server received: %q", string(msg))
 }
 
 func TestExternalServer(t *testing.T) {
@@ -81,5 +87,7 @@ func TestExternalServer(t *testing.T) {
 	if want, got := 0, bytes.Compare([]byte("WORLD"), msg); want != got {
 		t.Errorf("want %v, got %v", want, got)
 	}
+
+	t.Logf("client received: %q", string(msg))
 
 }

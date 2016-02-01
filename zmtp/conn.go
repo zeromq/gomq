@@ -10,10 +10,10 @@ import (
 )
 
 type Connection struct {
-	rw                io.ReadWriter
-	securityMechanism SecurityMechanism
-	socket            Socket
-	isPrepared        bool
+	rw                         io.ReadWriter
+	securityMechanism          SecurityMechanism
+	socket                     Socket
+	isPrepared                 bool
 	asServer, otherEndAsServer bool
 }
 
@@ -38,30 +38,30 @@ func (c *Connection) Prepare(mechanism SecurityMechanism, socketType SocketType,
 
 	var err error
 	if c.socket, err = NewSocket(socketType); err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while creating socket: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while creating socket: %v", err)
 	}
 
 	// Send/recv greeting
 	if err := c.sendGreeting(asServer); err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while sending greeting: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while sending greeting: %v", err)
 	}
 	if err := c.recvGreeting(asServer); err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while receiving greeting: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while receiving greeting: %v", err)
 	}
 
 	// Do security handshake
 	if err := mechanism.Handshake(); err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while running the security handshake: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while running the security handshake: %v", err)
 	}
 
 	// Send/recv metadata
 	if err := c.sendMetadata(socketType, applicationMetadata); err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while sending metadata: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while sending metadata: %v", err)
 	}
 
 	otherEndApplicationMetaData, err := c.recvMetadata()
 	if err != nil {
-		return nil, fmt.Errorf("zmqgo/zmtp: Got error while receiving metadata: %v", err)
+		return nil, fmt.Errorf("gomq/zmtp: Got error while receiving metadata: %v", err)
 	}
 
 	return otherEndApplicationMetaData, nil
@@ -71,7 +71,7 @@ func (c *Connection) sendGreeting(asServer bool) error {
 	greeting := greeting{
 		SignaturePrefix: signaturePrefix,
 		SignatureSuffix: signatureSuffix,
-		Version:    version,
+		Version:         version,
 	}
 	toNullPaddedString(string(c.securityMechanism.Type()), greeting.Mechanism[:])
 
@@ -274,32 +274,25 @@ func (c *Connection) send(isCommand bool, body []byte) error {
 	return nil
 }
 
-// Recv starts listening to the ReadWriter and returns two channels: The first one is for messages, the second one is for commands
-func (c *Connection) Recv() (<-chan []byte, <-chan *Command, <-chan error) {
-	messageOut := make(chan []byte)
-	commandOut := make(chan *Command)
-	errorOut := make(chan error)
-
+// Recv starts listening to the ReadWriter and passes *Message, *Command and
+// *Error messages to channels
+func (c *Connection) Recv(messageOut chan *Message, commandOut chan *Command, errorOut chan *Error) {
 	go func() {
-		defer close(messageOut)
-		defer close(commandOut)
-		defer close(errorOut)
-
 		for {
 			// Actually read out the body and send it over the channel now
 			isCommand, body, err := c.read()
 			if err != nil {
-				errorOut <- err
+				errorOut <- &Error{Error: err}
 				return
 			}
 
 			if !isCommand {
 				// Data frame
-				messageOut <- body
+				messageOut <- &Message{Body: body}
 			} else {
 				command, err := c.parseCommand(body)
 				if err != nil {
-					errorOut <- err
+					errorOut <- &Error{Error: err}
 					return
 				}
 
@@ -309,18 +302,16 @@ func (c *Connection) Recv() (<-chan []byte, <-chan *Command, <-chan error) {
 				case "PING":
 					// When we get a ping, we want to send back a pong, we don't really care about the contents right now
 					if err := c.SendCommand("PONG", nil); err != nil {
-						errorOut <- err
+						errorOut <- &Error{Error: err}
 						return
 					}
 				default:
-					commandOut <- command
+					commandOut <- &Command{Name: command.Name, Body: command.Body}
 				}
 
 			}
 		}
 	}()
-
-	return messageOut, commandOut, errorOut
 }
 
 // read returns the isCommand flag, the body of the message, and optionally an error
