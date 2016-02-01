@@ -316,7 +316,7 @@ func (c *Connection) Recv(messageOut chan<- *Message) {
 // read returns the isCommand flag, the body of the message, and optionally an error
 func (c *Connection) read() (bool, []byte, error) {
 	var header [2]byte
-	var longLength [4]byte
+	var longLength [8]byte
 
 	// Read out the header
 	readLength := uint64(0)
