@@ -2,12 +2,13 @@ package zmtp
 
 import "fmt"
 
-func toNullPaddedString(str string, dst []byte) {
+func toNullPaddedString(str string, dst []byte) error {
 	if len(str) > len(dst) {
-		panic(fmt.Sprintf("Null padded string of length %v cannot accomodate content of length %v", len(str), len(str)))
+		return fmt.Errorf("dst []byte too short for string")
 	}
 
 	copy(dst, str)
+	return nil
 }
 
 func fromNullPaddedString(slice []byte) string {
@@ -40,5 +41,5 @@ func fromByteBool(b byte) (bool, error) {
 		return true, nil
 	}
 
-	return false, fmt.Errorf("Invalid boolean byte %b", b)
+	return false, fmt.Errorf("Invalid boolean byte")
 }
