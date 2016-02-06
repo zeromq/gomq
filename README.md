@@ -1,7 +1,7 @@
 # GoMQ [![Build Status](https://travis-ci.org/zeromq/gomq.svg?branch=master)](https://travis-ci.org/zeromq/gomq) [![Doc Status](https://godoc.org/github.com/zeromq/gomq?status.png)](https://godoc.org/github.com/zeromq/gomq)
 
 ## Introduction
-A pure Go implemenation of the [ZeroMQ Message Transport Protocol](http://rfc.zeromq.org/spec:37). **Danger Will Robinson, Danger!** This code is very young. There will be false starts, APIs will change and things will break. If you are looking to use ZeroMQ with Go in a production project, we suggest using [GoCZMQ](http://github.com/zeromq/goczmq), which depends on the [CZMQ](http://github.com/zeromq/czmq) C API. 
+A pure Go implementation of the [ZeroMQ Message Transport Protocol](http://rfc.zeromq.org/spec:37). **Danger Will Robinson, Danger!** This code is very young. There will be false starts, APIs will change and things will break. If you are looking to use ZeroMQ with Go in a production project, we suggest using [GoCZMQ](http://github.com/zeromq/goczmq), which depends on the [CZMQ](http://github.com/zeromq/czmq) C API. 
 
 ## Problem Statement
 We want to use ZeroMQ in Go projects. While GoCZMQ provides a way to do this, dealing with C dependencies while writing Go is not fun - and we like fun.
@@ -15,7 +15,7 @@ GoMQ will be a pure Go implementation of a subset of ZMTP, wrapped with a friend
 * The CURVE securty mechanism
 
 ## Contribution Guidelines
-GoMQ adheres to the [Collective Code Construction Contract](http://rfc.zeromq.org/spec:22). For details, see [CONTRIBUTING.md](https://github.com/zeromq/gomq/blob/master/CONTRIBUTING.md). We believe that building a community is an essential component of succesful open source software, and not just a side effect. People before code.
+GoMQ adheres to the [Collective Code Construction Contract](http://rfc.zeromq.org/spec:22). For details, see [CONTRIBUTING.md](https://github.com/zeromq/gomq/blob/master/CONTRIBUTING.md). We believe that building a community is an essential component of succesful open source software, and not just a side effect. [People before code!](http://hintjens.com/blog:95)
 
 ## Setting Up Your Development Environment
 While the end goal of GoMQ is a pure Go implementation of ZeroMQ with no dependencies on cgo, we currently require cgo for our test suite. The friction this creates in getting started is unfortunate but we feel it's the best way to test interoperability between our implemenation and the reference implementation of the protocol. Assuming that you already have a working Go development environment ( see: [The Go Programming Language: Getting Started](https://golang.org/doc/install) ) you will additionally need the following libraries:
@@ -23,7 +23,7 @@ While the end goal of GoMQ is a pure Go implementation of ZeroMQ with no depende
 * [libzmq](https://github.com/zeromq/libzmq)
 * [czmq](https://github.com/zeromq/czmq)
 
-Because we are implementing ZeroMQ socket types that are not yet included in a stable release, we are development against git master checkouts of libzmq and czmq. These build instructions were tested on Ubuntu 15.10. If someone would like to provide guides for getting started on OSX and Windows, that would be great!
+Because we are implementing ZeroMQ socket types that are not yet included in a stable release, we are developing against git master checkouts of libzmq and czmq. These build instructions were tested on Ubuntu 15.10. If someone would like to provide guides for getting started on OSX and Windows, that would be great!
 
 *Install libsodium*
 ```
@@ -39,7 +39,7 @@ sudo make install
 sudo ldconfig
 ```
 
-*Install libzmq*
+*Building libzmq from master*
 ```
 git clone git@github.com:zeromq/libzmq.git
 cd libzmq
@@ -50,7 +50,7 @@ sudo make install
 sudo ldconfig
 ```
 
-*Install czmq*
+*Building czmq from master*
 ```
 git clone git@github.com:zeromq/czmq.git
 cd libzmq
@@ -60,6 +60,8 @@ make check
 sudo make install
 sudo ldconfig
 ```
+
+Note: if for some reason libzmq or czmq do not build properly or have failing tests, don't panic! This is an excellent opportunity to get involved in the community. If you can figure out the problem on you own and fix it, send us a pull request. If you're stumped, feel free to hop on the [ZeroMQ mailing list](http://zeromq.org/docs:mailing-lists) and describe the problem you're running into.
 
 ## Getting Started
 You should now be ready to get started. Fork gomq, clone it, and make sure the tests now work in your environment:
@@ -77,6 +79,8 @@ You should now be ready to get started. Fork gomq, clone it, and make sure the t
 PASS
 ok		github.com/zeromq/gomq	0.255s
 ```
+
+Now you're ready. Remember: pull requests should always be simple solutions to minimal problems. If you're stuck, want to discuss ideas or just want to say hello, some of us are usually lurking in the #zeromq channel on the [gophers slack](https://blog.gopheracademy.com/gophers-slack-community/).
 
 ## Helpful Reference Material
 * [The Collective Code Construction Contract](http://rfc.zeromq.org/spec:22)
