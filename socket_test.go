@@ -36,6 +36,8 @@ func TestNewClient(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+
+		client.Close()
 	}()
 
 	server := NewServer(zmtp.NewSecurityNull())
@@ -67,6 +69,8 @@ func TestNewClient(t *testing.T) {
 	}
 
 	t.Logf("server received: %q", string(msg))
+
+	server.Close()
 }
 
 func TestExternalServer(t *testing.T) {
@@ -91,4 +95,5 @@ func TestExternalServer(t *testing.T) {
 
 	t.Logf("client received: %q", string(msg))
 
+	client.Close()
 }

@@ -27,9 +27,8 @@ func fromNullPaddedString(slice []byte) string {
 func toByteBool(b bool) byte {
 	if b {
 		return byte(0x01)
-	} else {
-		return byte(0x00)
 	}
+	return byte(0x00)
 }
 
 func fromByteBool(b byte) (bool, error) {

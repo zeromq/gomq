@@ -18,11 +18,18 @@ const (
 	isCommandBitFlag = 0x4
 )
 
+// MessageType represents a "type" of ZMTP message
+// (User, Command, Error)
 type MessageType int
 
 const (
+	// UserMessage is a ZMTP message send by a user
 	UserMessage MessageType = iota
+
+	// CommandMessage is a ZMTP command
 	CommandMessage
+
+	// ErrorMessage is.. an error message
 	ErrorMessage
 )
 
@@ -51,12 +58,14 @@ type greeting struct {
 	_               [31]byte
 }
 
+// Command represents an underlying ZMTP command
 type Command struct {
 	Index int
 	Name  string
 	Body  []byte
 }
 
+// Message represents a ZMTP message
 type Message struct {
 	Index       int
 	Name        string
