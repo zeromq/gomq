@@ -228,7 +228,7 @@ func (c *Connection) SendCommand(commandName string, body []byte) error {
 		return errors.New("Command names may not be longer than 255 characters")
 	}
 
-	// Make the buffer of the correct lenght and reset it
+	// Make the buffer of the correct length and reset it
 	buffer := new(bytes.Buffer)
 	buffer.WriteByte(byte(len(commandName)))
 	buffer.Write([]byte(commandName))
