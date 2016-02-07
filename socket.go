@@ -34,8 +34,6 @@ type Socket interface {
 	Send([]byte) error
 	Connect(endpoint string) error
 	Bind(endpoint string) (net.Addr, error)
-	SetRetry(retry time.Duration)
-	GetRetry() time.Duration
 	Close()
 }
 
@@ -70,7 +68,7 @@ func (s *socket) Connect(endpoint string) error {
 Connect:
 	netconn, err := net.Dial(parts[0], parts[1])
 	if err != nil {
-		time.Sleep(s.GetRetry())
+		time.Sleep(s.retryInterval)
 		goto Connect
 	}
 
@@ -132,14 +130,6 @@ func (s *socket) Close() {
 	for _, v := range s.conns {
 		v.netconn.Close()
 	}
-}
-
-func (s *socket) GetRetry() time.Duration {
-	return s.retryInterval
-}
-
-func (s *socket) SetRetry(r time.Duration) {
-	s.retryInterval = r
 }
 
 func NewClient(mechanism zmtp.SecurityMechanism) Socket {
