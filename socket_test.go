@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/zeromq/gomq/internal/test"
+	"github.com/zeromq/gomq/zmtp"
 )
 
 func TestNewClient(t *testing.T) {
@@ -13,7 +14,7 @@ func TestNewClient(t *testing.T) {
 	var err error
 
 	go func() {
-		client := NewClient(NewSecurityNull())
+		client := NewClient(zmtp.NewSecurityNull())
 		err = client.Connect("tcp://127.0.0.1:9999")
 		if err != nil {
 			t.Error(err)
@@ -37,7 +38,7 @@ func TestNewClient(t *testing.T) {
 		}
 	}()
 
-	server := NewServer(NewSecurityNull())
+	server := NewServer(zmtp.NewSecurityNull())
 
 	addr, err = server.Bind("tcp://127.0.0.1:9999")
 
@@ -71,7 +72,7 @@ func TestNewClient(t *testing.T) {
 func TestExternalServer(t *testing.T) {
 	go test.StartExternalServer()
 
-	client := NewClient(NewSecurityNull())
+	client := NewClient(zmtp.NewSecurityNull())
 	err := client.Connect("tcp://127.0.0.1:31337")
 	if err != nil {
 		t.Fatal(err)

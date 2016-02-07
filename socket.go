@@ -36,6 +36,7 @@ type Socket interface {
 	Bind(endpoint string) (net.Addr, error)
 	SetRetry(retry time.Duration)
 	GetRetry() time.Duration
+	Close()
 }
 
 type socket struct {
@@ -127,16 +128,18 @@ func (s *socket) Bind(endpoint string) (net.Addr, error) {
 	return netconn.LocalAddr(), nil
 }
 
+func (s *socket) Close() {
+	for _, v := range s.conns {
+		v.netconn.Close()
+	}
+}
+
 func (s *socket) GetRetry() time.Duration {
 	return s.retryInterval
 }
 
 func (s *socket) SetRetry(r time.Duration) {
 	s.retryInterval = r
-}
-
-func NewSecurityNull() *zmtp.SecurityNull {
-	return zmtp.NewSecurityNull()
 }
 
 func NewClient(mechanism zmtp.SecurityMechanism) Socket {
