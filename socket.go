@@ -11,31 +11,26 @@ import (
 )
 
 var (
-	ClientSocketType = zmtp.ClientSocketType
-	ServerSocketType = zmtp.ServerSocketType
-
-	NullSecurityMechanismType  = zmtp.NullSecurityMechanismType
-	PlainSecurityMechanismType = zmtp.PlainSecurityMechanismType
-	CurveSecurityMechanismTyp  = zmtp.CurveSecurityMechanismType
-
-	ErrNotImplemented    = errors.New("not implemented")
+	// ErrInvalidSockAction is returned when an action is performed
+	// on a socket type that does not support the action
 	ErrInvalidSockAction = errors.New("action not valid on this socket")
 
 	defaultRetry = 250 * time.Millisecond
 )
 
+// Connection holds a connection to a ZeroMQ socket.
 type Connection struct {
 	netconn  net.Conn
 	zmtpconn *zmtp.Connection
 }
 
+// Socket represents a ZeroMQ socket. Sockets may have multiple connections.
 type Socket interface {
 	Recv() ([]byte, error)
 	Send([]byte) error
 	Connect(endpoint string) error
 	Bind(endpoint string) (net.Addr, error)
-	SetRetry(retry time.Duration)
-	GetRetry() time.Duration
+	Close()
 }
 
 type socket struct {
@@ -48,7 +43,7 @@ type socket struct {
 	messageChan   chan *zmtp.Message
 }
 
-func NewSocket(sockType zmtp.SocketType, asServer bool, mechanism zmtp.SecurityMechanism) Socket {
+func newSocket(sockType zmtp.SocketType, asServer bool, mechanism zmtp.SecurityMechanism) Socket {
 	return &socket{
 		asServer:      asServer,
 		sockType:      sockType,
@@ -59,6 +54,7 @@ func NewSocket(sockType zmtp.SocketType, asServer bool, mechanism zmtp.SecurityM
 	}
 }
 
+// Connect connects to an endpoint.
 func (s *socket) Connect(endpoint string) error {
 	if s.asServer {
 		return ErrInvalidSockAction
@@ -69,7 +65,7 @@ func (s *socket) Connect(endpoint string) error {
 Connect:
 	netconn, err := net.Dial(parts[0], parts[1])
 	if err != nil {
-		time.Sleep(s.GetRetry())
+		time.Sleep(s.retryInterval)
 		goto Connect
 	}
 
@@ -90,6 +86,7 @@ Connect:
 	return nil
 }
 
+// Bind binds to an endpoint.
 func (s *socket) Bind(endpoint string) (net.Addr, error) {
 	var addr net.Addr
 
@@ -127,26 +124,24 @@ func (s *socket) Bind(endpoint string) (net.Addr, error) {
 	return netconn.LocalAddr(), nil
 }
 
-func (s *socket) GetRetry() time.Duration {
-	return s.retryInterval
+// Close closes all underlying connections in a socket.
+func (s *socket) Close() {
+	for _, v := range s.conns {
+		v.netconn.Close()
+	}
 }
 
-func (s *socket) SetRetry(r time.Duration) {
-	s.retryInterval = r
-}
-
-func NewSecurityNull() *zmtp.SecurityNull {
-	return zmtp.NewSecurityNull()
-}
-
+// NewClient creates a new ZMQ_CLIENT socket.
 func NewClient(mechanism zmtp.SecurityMechanism) Socket {
-	return NewSocket(ClientSocketType, false, mechanism)
+	return newSocket(zmtp.ClientSocketType, false, mechanism)
 }
 
+// NewServer creates a new ZMQ_SERVER socket.
 func NewServer(mechanism zmtp.SecurityMechanism) Socket {
-	return NewSocket(ServerSocketType, true, mechanism)
+	return newSocket(zmtp.ServerSocketType, true, mechanism)
 }
 
+// Recv receives the next message from the socket.
 func (s *socket) Recv() ([]byte, error) {
 	msg := <-s.messageChan
 	if msg.MessageType == zmtp.CommandMessage {
@@ -154,6 +149,7 @@ func (s *socket) Recv() ([]byte, error) {
 	return msg.Body, msg.Err
 }
 
+// Send sends a message.
 func (s *socket) Send(b []byte) error {
 	return s.conns[0].zmtpconn.SendFrame(b)
 }

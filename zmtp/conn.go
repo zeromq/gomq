@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// Connection is a ZMTP level connection
 type Connection struct {
 	rw                         io.ReadWriter
 	securityMechanism          SecurityMechanism
@@ -17,17 +18,23 @@ type Connection struct {
 	asServer, otherEndAsServer bool
 }
 
+// SocketType is a ZMTP socket type
 type SocketType string
 
 const (
+	// ClientSocketType is a ZMQ_CLIENT socket
 	ClientSocketType SocketType = "CLIENT"
+
+	// ServerSocketType is a ZMQ_SERVER socket
 	ServerSocketType SocketType = "SERVER"
 )
 
+// NewConnection accepts an io.ReadWriter and creates a new ZMTP connection
 func NewConnection(rw io.ReadWriter) *Connection {
 	return &Connection{rw: rw}
 }
 
+// Prepare performs a ZMTP handshake over a Connection's readWriter
 func (c *Connection) Prepare(mechanism SecurityMechanism, socketType SocketType, asServer bool, applicationMetadata map[string]string) (map[string]string, error) {
 	if c.isPrepared {
 		return nil, errors.New("Connection was already prepared")
@@ -215,6 +222,7 @@ func (c *Connection) recvMetadata() (map[string]string, error) {
 	return applicationMetadata, nil
 }
 
+// SendCommand sends a ZMTP command over a Connection
 func (c *Connection) SendCommand(commandName string, body []byte) error {
 	if len(commandName) > 255 {
 		return errors.New("Command names may not be longer than 255 characters")
@@ -229,6 +237,7 @@ func (c *Connection) SendCommand(commandName string, body []byte) error {
 	return c.send(true, buffer.Bytes())
 }
 
+// SendFrame sends a ZMTP frame over a Connection
 func (c *Connection) SendFrame(body []byte) error {
 	return c.send(false, body)
 }
