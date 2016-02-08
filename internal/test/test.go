@@ -16,6 +16,7 @@ func init() {
 	}
 }
 
+// StartExternalServer starts a C service for testing ZMTP compatibility against.
 func StartExternalServer() {
 	C.startExternalServer()
 }
