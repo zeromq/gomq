@@ -147,9 +147,9 @@ func (s *socket) removeConn(uuid string) {
 // Close closes all underlying connections in a socket.
 func (s *socket) Close() {
 	s.lock.Lock()
-	for _, v := range s.clients {
+	for k, v := range s.clients {
 		s.conns[v].netconn.Close()
-		s.removeConn(v)
+		s.clients = append(s.clients[:k], s.clients[k+1:]...)
 	}
 	s.lock.Unlock()
 }
