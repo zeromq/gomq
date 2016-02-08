@@ -36,25 +36,29 @@ type Socket interface {
 type socket struct {
 	sockType      zmtp.SocketType
 	asServer      bool
-	conns         []*Connection
+	conns         map[string]*Connection
+	clients       []string
 	retryInterval time.Duration
-	lock          sync.Mutex
+	lock          *sync.RWMutex
 	mechanism     zmtp.SecurityMechanism
 	messageChan   chan *zmtp.Message
 }
 
 func newSocket(sockType zmtp.SocketType, asServer bool, mechanism zmtp.SecurityMechanism) Socket {
 	return &socket{
+		lock:          &sync.RWMutex{},
 		asServer:      asServer,
 		sockType:      sockType,
 		retryInterval: defaultRetry,
 		mechanism:     mechanism,
-		conns:         make([]*Connection, 0),
+		conns:         make(map[string]*Connection),
+		clients:       make([]string, 0),
 		messageChan:   make(chan *zmtp.Message),
 	}
 }
 
 // Connect connects to an endpoint.
+// TODO: this call should be non blocking
 func (s *socket) Connect(endpoint string) error {
 	if s.asServer {
 		return ErrInvalidSockAction
@@ -80,8 +84,7 @@ Connect:
 		zmtpconn: zmtpconn,
 	}
 
-	s.conns = append(s.conns, conn)
-
+	s.addConn(conn)
 	zmtpconn.Recv(s.messageChan)
 	return nil
 }
@@ -117,18 +120,38 @@ func (s *socket) Bind(endpoint string) (net.Addr, error) {
 		zmtpconn: zmtpconn,
 	}
 
-	s.conns = append(s.conns, conn)
-
+	s.addConn(conn)
 	zmtpconn.Recv(s.messageChan)
-
 	return netconn.LocalAddr(), nil
+}
+
+func (s *socket) addConn(conn *Connection) {
+	s.lock.Lock()
+	uuid, _ := newUUID()
+	s.conns[uuid] = conn
+	s.clients = append(s.clients, uuid)
+	s.lock.Unlock()
+}
+
+func (s *socket) removeConn(uuid string) {
+	s.lock.Lock()
+	for k, v := range s.clients {
+		if v == uuid {
+			s.clients = append(s.clients[:k], s.clients[k+1:]...)
+		}
+	}
+	delete(s.conns, uuid)
+	s.lock.Unlock()
 }
 
 // Close closes all underlying connections in a socket.
 func (s *socket) Close() {
-	for _, v := range s.conns {
-		v.netconn.Close()
+	s.lock.Lock()
+	for _, v := range s.clients {
+		s.conns[v].netconn.Close()
+		s.removeConn(v)
 	}
+	s.lock.Unlock()
 }
 
 // NewClient creates a new ZMQ_CLIENT socket.
@@ -151,5 +174,5 @@ func (s *socket) Recv() ([]byte, error) {
 
 // Send sends a message.
 func (s *socket) Send(b []byte) error {
-	return s.conns[0].zmtpconn.SendFrame(b)
+	return s.conns[s.clients[0]].zmtpconn.SendFrame(b)
 }
