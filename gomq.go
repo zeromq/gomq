@@ -27,7 +27,8 @@ type ZeroMQSocket interface {
 	RetryInterval() time.Duration
 	SocketType() zmtp.SocketType
 	SecurityMechanism() zmtp.SecurityMechanism
-	AddConnection(conn *Connection)
+	AddConnection(*Connection)
+	RemoveConnection(string)
 	RecvChannel() chan *zmtp.Message
 	Close()
 }
