@@ -23,7 +23,7 @@ const (
 type MessageType int
 
 const (
-	// UserMessage is a ZMTP message send by a user
+	// UserMessage is a ZMTP message sent by a user
 	UserMessage MessageType = iota
 
 	// CommandMessage is a ZMTP command
