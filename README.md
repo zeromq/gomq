@@ -23,7 +23,11 @@ While the end goal of GoMQ is a pure Go implementation of ZeroMQ with no depende
 * [libzmq](https://github.com/zeromq/libzmq)
 * [czmq](https://github.com/zeromq/czmq)
 
-Because we are implementing ZeroMQ socket types that are not yet included in a stable release, we are developing against git master checkouts of libzmq and czmq. These build instructions were tested on Ubuntu 15.10. If someone would like to provide guides for getting started on OSX and Windows, that would be great!
+Because we are implementing ZeroMQ socket types that are not yet included in a stable release, we are developing against git master checkouts of libzmq and czmq. These build instructions were tested on Ubuntu 15.10. If someone would like to provide guides for getting started on Windows, that would be great!
+
+### Linux & OSX
+
+Note: Each of these libraries need you to run `sudo ldconfig` if you are on Linux. You can skip it if you are on OSX.
 
 *Install libsodium*
 ```
@@ -39,6 +43,9 @@ sudo make install
 sudo ldconfig
 ```
 
+On OSX, verify that, the output of `ls -al /usr/local/lib/libsodium.dylib` is:
+`lrwxr-xr-x  1 root  admin    18B Feb 21 10:35 /usr/local/lib/libsodium.dylib@ -> libsodium.18.dylib`
+
 *Building libzmq from master*
 ```
 git clone git@github.com:zeromq/libzmq.git
@@ -50,6 +57,9 @@ sudo make install
 sudo ldconfig
 ```
 
+On OSX, verify that, the output of `ls -al /usr/local/lib/libzmq.dylib` is:
+`lrwxr-xr-x  1 dhanush  admin    29B Feb 21 15:55 /usr/local/lib/libzmq.dylib@ -> /usr/local/lib/libzmq.5.dylib`
+
 *Building czmq from master*
 ```
 git clone git@github.com:zeromq/czmq.git
@@ -60,6 +70,9 @@ make check
 sudo make install
 sudo ldconfig
 ```
+
+On OSX, verify that, the output of `ls -al /usr/local/lib/libczmq.dylib` is:
+`lrwxr-xr-x  1 root  admin    15B Feb 21 15:57 /usr/local/lib/libczmq.dylib@ -> libczmq.3.dylib`
 
 Note: if for some reason libzmq or czmq do not build properly or have failing tests, don't panic! This is an excellent opportunity to get involved in the community. If you can figure out the problem on you own and fix it, send us a pull request. If you're stumped, feel free to hop on the [ZeroMQ mailing list](http://zeromq.org/docs:mailing-lists) and describe the problem you're running into.
 
