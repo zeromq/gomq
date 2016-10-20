@@ -97,3 +97,54 @@ func TestExternalServer(t *testing.T) {
 
 	client.Close()
 }
+
+func TestPushPull(t *testing.T) {
+	var addr net.Addr
+	var err error
+
+	go func() {
+		pull := NewPull(zmtp.NewSecurityNull())
+		err = pull.Connect("tcp://127.0.0.1:9999")
+		if err != nil {
+			t.Error(err)
+		}
+
+		msg, _ := pull.Recv()
+		if want, got := 0, bytes.Compare([]byte("HELLO"), msg); want != got {
+			t.Errorf("want %v, got %v", want, got)
+		}
+
+		t.Logf("pull received: %q", string(msg))
+
+		err = pull.Send([]byte("GOODBYE"))
+		if err != nil {
+			t.Error(err)
+		}
+
+		pull.Close()
+	}()
+
+	push := NewPush(zmtp.NewSecurityNull())
+
+	addr, err = push.Bind("tcp://127.0.0.1:9999")
+
+	if want, got := "127.0.0.1:9999", addr.String(); want != got {
+		t.Errorf("want %q, got %q", want, got)
+	}
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	push.Send([]byte("HELLO"))
+
+	msg, _ := push.Recv()
+
+	if want, got := 0, bytes.Compare([]byte("GOODBYE"), msg); want != got {
+		t.Errorf("want %v, got %v (%v)", want, got, msg)
+	}
+
+	t.Logf("push received: %q", string(msg))
+
+	push.Close()
+}
