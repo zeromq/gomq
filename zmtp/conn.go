@@ -27,6 +27,12 @@ const (
 
 	// ServerSocketType is a ZMQ_SERVER socket
 	ServerSocketType SocketType = "SERVER"
+
+	// PullSocketType is a ZMQ_PULL socket
+	PullSocketType SocketType = "PULL"
+
+	// PushSocketType is a ZMQ_PUSH socket
+	PushSocketType SocketType = "PUSH"
 )
 
 // NewConnection accepts an io.ReadWriter and creates a new ZMTP connection
