@@ -43,26 +43,32 @@ func TestNewClient(t *testing.T) {
 	server := NewServer(zmtp.NewSecurityNull())
 
 	addr, err = server.Bind("tcp://127.0.0.1:9999")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if want, got := "127.0.0.1:9999", addr.String(); want != got {
-		t.Errorf("want %q, got %q", want, got)
+		t.Fatalf("want %q, got %q", want, got)
 	}
 
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	msg, _ := server.Recv()
 
 	if want, got := 0, bytes.Compare([]byte("HELLO"), msg); want != got {
-		t.Errorf("want %v, got %v", want, got)
+		t.Fatalf("want %v, got %v", want, got)
 	}
 
 	t.Logf("server received: %q", string(msg))
 
 	server.Send([]byte("WORLD"))
 
-	msg, _ = server.Recv()
+	msg, err = server.Recv()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if want, got := 0, bytes.Compare([]byte("GOODBYE"), msg); want != got {
 		t.Errorf("want %v, got %v", want, got)
@@ -104,44 +110,56 @@ func TestPushPull(t *testing.T) {
 
 	go func() {
 		pull := NewPull(zmtp.NewSecurityNull())
-		err = pull.Connect("tcp://127.0.0.1:9999")
+		defer pull.Close()
+		err = pull.Connect("tcp://127.0.0.1:12345")
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
-		msg, _ := pull.Recv()
+		msg, err := pull.Recv()
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		if want, got := 0, bytes.Compare([]byte("HELLO"), msg); want != got {
-			t.Errorf("want %v, got %v", want, got)
+			t.Fatalf("want %v, got %v", want, got)
 		}
 
 		t.Logf("pull received: %q", string(msg))
 
 		err = pull.Send([]byte("GOODBYE"))
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		pull.Close()
 	}()
 
 	push := NewPush(zmtp.NewSecurityNull())
+	defer push.Close()
 
-	addr, err = push.Bind("tcp://127.0.0.1:9999")
+	addr, err = push.Bind("tcp://127.0.0.1:12345")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if want, got := "127.0.0.1:9999", addr.String(); want != got {
-		t.Errorf("want %q, got %q", want, got)
+	if want, got := "127.0.0.1:12345", addr.String(); want != got {
+		t.Fatalf("want %q, got %q", want, got)
 	}
 
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	push.Send([]byte("HELLO"))
 
-	msg, _ := push.Recv()
+	msg, err := push.Recv()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if want, got := 0, bytes.Compare([]byte("GOODBYE"), msg); want != got {
-		t.Errorf("want %v, got %v (%v)", want, got, msg)
+		t.Fatalf("want %v, got %v (%v)", want, got, msg)
 	}
 
 	t.Logf("push received: %q", string(msg))
