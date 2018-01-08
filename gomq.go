@@ -20,6 +20,16 @@ type Connection struct {
 	zmtp *zmtp.Connection
 }
 
+// NewConnection accepts a net.Conn, a *zmtp.Connection
+// and returns a *gomq.Connection.
+func NewConnection(netConn net.Conn, zmtpConn *zmtp.Connection) *Connection {
+	conn := &Connection{
+		net:  netConn,
+		zmtp: zmtpConn,
+	}
+	return conn
+}
+
 // ZeroMQSocket is the base gomq interface.
 type ZeroMQSocket interface {
 	Recv() ([]byte, error)
