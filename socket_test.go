@@ -166,3 +166,67 @@ func TestPushPull(t *testing.T) {
 
 	push.Close()
 }
+
+func TestPullPush(t *testing.T) {
+	port := "19001"
+	var addr net.Addr
+	var err error
+
+	go func() {
+		push := NewPush(zmtp.NewSecurityNull())
+		defer push.Close()
+		err = push.Connect("tcp://127.0.0.1:" + port)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		msg, err := push.Recv()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if want, got := 0, bytes.Compare([]byte("HELLO"), msg); want != got {
+			t.Fatalf("want %v, got %v", want, got)
+		}
+
+		t.Logf("push received: %q", string(msg))
+
+		err = push.Send([]byte("GOODBYE"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		push.Close()
+	}()
+
+	pull := NewPull(zmtp.NewSecurityNull())
+	defer pull.Close()
+
+	addr, err = pull.Bind("tcp://127.0.0.1:" + port)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want, got := "127.0.0.1:"+port, addr.String(); want != got {
+		t.Fatalf("want %q, got %q", want, got)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pull.Send([]byte("HELLO"))
+
+	msg, err := pull.Recv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want, got := 0, bytes.Compare([]byte("GOODBYE"), msg); want != got {
+		t.Fatalf("want %v, got %v (%v)", want, got, msg)
+	}
+
+	t.Logf("pull received: %q", string(msg))
+
+	pull.Close()
+}
