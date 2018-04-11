@@ -36,6 +36,7 @@ type ZeroMQSocket interface {
 	Send([]byte) error
 	RetryInterval() time.Duration
 	SocketType() zmtp.SocketType
+	SocketIdentity() zmtp.SocketIdentity
 	SecurityMechanism() zmtp.SecurityMechanism
 	AddConnection(*Connection)
 	RemoveConnection(string)
@@ -69,7 +70,7 @@ Connect:
 	}
 
 	zmtpConn := zmtp.NewConnection(netConn)
-	_, err = zmtpConn.Prepare(c.SecurityMechanism(), c.SocketType(), false, nil)
+	_, err = zmtpConn.Prepare(c.SecurityMechanism(), c.SocketType(), c.SocketIdentity(), false, nil)
 	if err != nil {
 		return err
 	}
@@ -112,7 +113,7 @@ func BindServer(s Server, endpoint string) (net.Addr, error) {
 	}
 
 	zmtpConn := zmtp.NewConnection(netConn)
-	_, err = zmtpConn.Prepare(s.SecurityMechanism(), s.SocketType(), true, nil)
+	_, err = zmtpConn.Prepare(s.SecurityMechanism(), s.SocketType(), s.SocketIdentity(), true, nil)
 	if err != nil {
 		return netConn.LocalAddr(), err
 	}

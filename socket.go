@@ -12,6 +12,7 @@ import (
 // as ClientSocket, ServerSocket, etc embed this type.
 type Socket struct {
 	sockType      zmtp.SocketType
+	sockID        zmtp.SocketIdentity
 	asServer      bool
 	conns         map[string]*Connection
 	ids           []string
@@ -21,13 +22,14 @@ type Socket struct {
 	recvChannel   chan *zmtp.Message
 }
 
-// NewSocket accepts an asServer boolean, zmtp.SocketType and a zmtp.SecurityMechanism
+// NewSocket accepts an asServer boolean, zmtp.SocketType, a socket identity and a zmtp.SecurityMechanism
 // and returns a *Socket.
-func NewSocket(asServer bool, sockType zmtp.SocketType, mechanism zmtp.SecurityMechanism) *Socket {
+func NewSocket(asServer bool, sockType zmtp.SocketType, sockID zmtp.SocketIdentity, mechanism zmtp.SecurityMechanism) *Socket {
 	return &Socket{
 		lock:          &sync.RWMutex{},
 		asServer:      asServer,
 		sockType:      sockType,
+		sockID:        sockID,
 		retryInterval: defaultRetry,
 		mechanism:     mechanism,
 		conns:         make(map[string]*Connection),
@@ -75,6 +77,11 @@ func (s *Socket) RetryInterval() time.Duration {
 // SocketType returns the Socket's zmtp.SocketType.
 func (s *Socket) SocketType() zmtp.SocketType {
 	return s.sockType
+}
+
+// SocketIdentity returns the Socket's zmtp.SocketIdentity.
+func (s *Socket) SocketIdentity() zmtp.SocketIdentity {
+	return s.sockID
 }
 
 // SecurityMechanism returns the Socket's zmtp.SecurityMechanism.

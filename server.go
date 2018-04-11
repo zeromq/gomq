@@ -16,7 +16,7 @@ type ServerSocket struct {
 // a ServerSocket as a gomq.Server interface.
 func NewServer(mechanism zmtp.SecurityMechanism) Server {
 	return &ServerSocket{
-		Socket: NewSocket(true, zmtp.ServerSocketType, mechanism),
+		Socket: NewSocket(true, zmtp.ServerSocketType, nil, mechanism),
 	}
 }
 
