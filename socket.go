@@ -105,7 +105,7 @@ func (s *Socket) Recv() ([]byte, error) {
 	msg := <-s.recvChannel
 	if msg.MessageType == zmtp.CommandMessage {
 	}
-	return msg.Body, msg.Err
+	return msg.Body[0], msg.Err
 }
 
 // Send sends a message. FIXME should use a channel.
@@ -121,5 +121,8 @@ func (s *Socket) SendMultipart(b [][]byte) error {
 }
 
 func (s *Socket) RecvMultipart() ([][]byte, error) {
-	panic("not implemented")
+	msg := <-s.recvChannel
+	if msg.MessageType == zmtp.CommandMessage {
+	}
+	return msg.Body, msg.Err
 }

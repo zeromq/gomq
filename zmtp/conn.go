@@ -302,7 +302,8 @@ func (c *Connection) Recv(messageOut chan<- *Message) {
 
 			if !isCommand {
 				// Data frame
-				messageOut <- &Message{Body: body, MessageType: UserMessage}
+				frames := [][]byte{body}
+				messageOut <- &Message{Body: frames, MessageType: UserMessage}
 			} else {
 				command, err := c.parseCommand(body)
 				if err != nil {
@@ -320,7 +321,8 @@ func (c *Connection) Recv(messageOut chan<- *Message) {
 						return
 					}
 				default:
-					messageOut <- &Message{Name: command.Name, Body: command.Body, MessageType: ErrorMessage}
+					frames := [][]byte{command.Body}
+					messageOut <- &Message{Name: command.Name, Body: frames, MessageType: ErrorMessage}
 				}
 
 			}
@@ -468,4 +470,120 @@ func (c *Connection) sendMultipart(isCommand bool, bs [][]byte) error {
 		}
 	}
 	return nil
+}
+
+// RecvMultipart starts listening to the ReadWriter and passes *Message to a channel
+func (c *Connection) RecvMultipart(messageOut chan<- *Message) {
+	go func() {
+		for {
+			// Actually read out the body and send it over the channel now
+			isCommand, body, err := c.readMultipart()
+			if err != nil {
+				messageOut <- &Message{Err: err, MessageType: ErrorMessage}
+				return
+			}
+
+			if !isCommand {
+				// Data frame
+				messageOut <- &Message{Body: body, MessageType: UserMessage}
+			} else {
+				command, err := c.parseCommand(body[0])
+				if err != nil {
+					messageOut <- &Message{Err: err, MessageType: ErrorMessage}
+					return
+				}
+
+				// Check what type of command we got
+				// Certain commands we deal with directly, the rest we send over to the application
+				switch command.Name {
+				case "PING":
+					// When we get a ping, we want to send back a pong, we don't really care about the contents right now
+					if err := c.SendCommand("PONG", nil); err != nil {
+						messageOut <- &Message{Err: err, MessageType: ErrorMessage}
+						return
+					}
+				default:
+					frames := [][]byte{command.Body}
+					messageOut <- &Message{Name: command.Name, Body: frames, MessageType: ErrorMessage}
+				}
+
+			}
+		}
+	}()
+}
+
+// readMultipart returns the isCommand flag, the body of the message, and optionally an error
+func (c *Connection) readMultipart() (bool, [][]byte, error) {
+	var (
+		header     [2]byte
+		longLength [8]byte
+		frames     [][]byte
+
+		hasMore   = true
+		isCommand = false
+	)
+
+	for hasMore {
+		// Read out the header
+		readLength := uint64(0)
+		for readLength != 2 {
+			l, err := c.rw.Read(header[readLength:])
+			if err != nil {
+				return false, nil, err
+			}
+
+			readLength += uint64(l)
+		}
+
+		bitFlags := header[0]
+
+		// Read all the flags
+		hasMore = bitFlags&hasMoreBitFlag == hasMoreBitFlag
+		isLong := bitFlags&isLongBitFlag == isLongBitFlag
+		isCommand = isCommand || (bitFlags&isCommandBitFlag == isCommandBitFlag)
+
+		// Determine the actual length of the body
+		bodyLength := uint64(0)
+		if isLong {
+			// We read 2 bytes of the header already
+			// In case of a long message, the length is bytes 2-8 of the header
+			// We already have the first byte, so assign it, and then read the rest
+			longLength[0] = header[1]
+
+			readLength := 1
+			for readLength != 8 {
+				l, err := c.rw.Read(longLength[readLength:])
+				if err != nil {
+					return false, nil, err
+				}
+
+				readLength += l
+			}
+
+			if err := binary.Read(bytes.NewBuffer(longLength[:]), byteOrder, &bodyLength); err != nil {
+				return false, nil, err
+			}
+		} else {
+			// Short message length is just 1 byte, read it
+			bodyLength = uint64(header[1])
+		}
+
+		if bodyLength > uint64(maxInt64) {
+			return false, nil, fmt.Errorf("Body length %v overflows max int64 value %v", bodyLength, maxInt64)
+		}
+
+		buffer := new(bytes.Buffer)
+		readLength = 0
+		for readLength < bodyLength {
+			l, err := buffer.ReadFrom(io.LimitReader(c.rw, int64(bodyLength)-int64(readLength)))
+			if err != nil {
+				return false, nil, err
+			}
+
+			readLength += uint64(l)
+		}
+		frames = append(frames, buffer.Bytes())
+	}
+
+	return isCommand, frames, nil
 }
