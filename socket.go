@@ -112,3 +112,14 @@ func (s *Socket) Recv() ([]byte, error) {
 func (s *Socket) Send(b []byte) error {
 	return s.conns[s.ids[0]].zmtp.SendFrame(b)
 }
+
+func (s *Socket) SendMultipart(b [][]byte) error {
+	d := make([][]byte, len(b)+1) // FIXME(sbinet): allocates
+	d[0] = nil                    // Socket-Identity
+	copy(d[1:], b)
+	return s.conns[s.ids[0]].zmtp.SendMultipart(d)
+}
+
+func (s *Socket) RecvMultipart() ([][]byte, error) {
+	panic("not implemented")
+}

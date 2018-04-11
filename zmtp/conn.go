@@ -419,3 +419,53 @@ func (c *Connection) parseCommand(body []byte) (*Command, error) {
 
 	return command, nil
 }
+
+func (c *Connection) SendMultipart(bs [][]byte) error {
+	const cmd = false
+	return c.sendMultipart(cmd, bs)
+}
+
+func (c *Connection) sendMultipart(isCommand bool, bs [][]byte) error {
+	for i, part := range bs {
+		// Compute total body length
+		length := len(part)
+
+		var bitFlags byte
+
+		// More flag:
+		if i < len(bs)-1 {
+			bitFlags ^= hasMoreBitFlag
+		}
+
+		// Long flag
+		isLong := length > 255
+		if isLong {
+			bitFlags ^= isLongBitFlag
+		}
+
+		// Command flag
+		if isCommand {
+			bitFlags ^= isCommandBitFlag
+		}
+
+		// Write out the message itself
+		if _, err := c.rw.Write([]byte{bitFlags}); err != nil {
+			return err
+		}
+
+		if isLong {
+			if err := binary.Write(c.rw, byteOrder, int64(len(part))); err != nil {
+				return err
+			}
+		} else {
+			if err := binary.Write(c.rw, byteOrder, uint8(len(part))); err != nil {
+				return err
+			}
+		}
+
+		if _, err := c.rw.Write(c.securityMechanism.Encrypt(part)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
