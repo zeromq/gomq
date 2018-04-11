@@ -127,3 +127,40 @@ func BindServer(s Server, endpoint string) (net.Addr, error) {
 	zmtpConn.Recv(s.RecvChannel())
 	return netConn.LocalAddr(), nil
 }
+
+// Dealer is a gomq interface used for dealer sockets.
+// It implements the Socket interface along with a Connect method for
+// connecting to endpoints.
+type Dealer interface {
+	ZeroMQSocket
+	Connect(endpoint string) error
+}
+
+// ConnectDealer accepts a Dealer interface and an endpoint
+// in the format <proto>://<address>:<port>. It then attempts
+// to connect to the endpoint and perform a ZMTP handshake.
+func ConnectDealer(d Dealer, endpoint string) error {
+	parts := strings.Split(endpoint, "://")
+
+Connect:
+	netConn, err := net.Dial(parts[0], parts[1])
+	if err != nil {
+		time.Sleep(d.RetryInterval())
+		goto Connect
+	}
+
+	zmtpConn := zmtp.NewConnection(netConn)
+	_, err = zmtpConn.Prepare(d.SecurityMechanism(), d.SocketType(), d.SocketIdentity(), false, nil)
+	if err != nil {
+		return err
+	}
+
+	conn := &Connection{
+		net:  netConn,
+		zmtp: zmtpConn,
+	}
+
+	d.AddConnection(conn)
+	zmtpConn.RecvMultipart(d.RecvChannel())
+	return nil
+}
