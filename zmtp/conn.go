@@ -63,6 +63,12 @@ const (
 
 	// SubSocketType is a ZMQ_SUB socket
 	SubSocketType SocketType = "SUB"
+
+	// XPubSocketType is a ZMQ_XPUB socket
+	XPubSocketType SocketType = "XPUB"
+
+	// XSubSocketType is a ZMQ_XSUB socket
+	XSubSocketType SocketType = "XSUB"
 )
 
 // NewConnection accepts an io.ReadWriter and creates a new ZMTP connection

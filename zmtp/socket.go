@@ -32,6 +32,10 @@ func NewSocket(socketType SocketType) (Socket, error) {
 		return pubSocket{}, nil
 	case SubSocketType:
 		return subSocket{}, nil
+	case XPubSocketType:
+		return xpubSocket{}, nil
+	case XSubSocketType:
+		return xsubSocket{}, nil
 	default:
 		return nil, errors.New("Invalid socket type")
 	}
@@ -202,7 +206,11 @@ func (pubSocket) Type() SocketType {
 }
 
 func (pubSocket) IsSocketTypeCompatible(socketType SocketType) bool {
-	return socketType == SubSocketType
+	switch socketType {
+	case SubSocketType, XSubSocketType:
+		return true
+	}
+	return false
 }
 
 func (pubSocket) IsCommandTypeValid(name string) bool {
@@ -217,10 +225,52 @@ func (subSocket) Type() SocketType {
 }
 
 func (subSocket) IsSocketTypeCompatible(socketType SocketType) bool {
-	return socketType == PubSocketType
+	switch socketType {
+	case PubSocketType, XPubSocketType:
+		return true
+	}
+	return false
 }
 
 func (subSocket) IsCommandTypeValid(name string) bool {
+	// FIXME
+	return false
+}
+
+type xpubSocket struct{}
+
+func (xpubSocket) Type() SocketType {
+	return XPubSocketType
+}
+
+func (xpubSocket) IsSocketTypeCompatible(socketType SocketType) bool {
+	switch socketType {
+	case SubSocketType, XSubSocketType:
+		return true
+	}
+	return false
+}
+
+func (xpubSocket) IsCommandTypeValid(name string) bool {
+	// FIXME
+	return false
+}
+
+type xsubSocket struct{}
+
+func (xsubSocket) Type() SocketType {
+	return XSubSocketType
+}
+
+func (xsubSocket) IsSocketTypeCompatible(socketType SocketType) bool {
+	switch socketType {
+	case PubSocketType, XPubSocketType:
+		return true
+	}
+	return false
+}
+
+func (xsubSocket) IsCommandTypeValid(name string) bool {
 	// FIXME
 	return false
 }
