@@ -28,6 +28,10 @@ func NewSocket(socketType SocketType) (Socket, error) {
 		return reqSocket{}, nil
 	case RepSocketType:
 		return repSocket{}, nil
+	case PubSocketType:
+		return pubSocket{}, nil
+	case SubSocketType:
+		return subSocket{}, nil
 	default:
 		return nil, errors.New("Invalid socket type")
 	}
@@ -187,6 +191,36 @@ func (repSocket) IsSocketTypeCompatible(socketType SocketType) bool {
 }
 
 func (repSocket) IsCommandTypeValid(name string) bool {
+	// FIXME
+	return false
+}
+
+type pubSocket struct{}
+
+func (pubSocket) Type() SocketType {
+	return PubSocketType
+}
+
+func (pubSocket) IsSocketTypeCompatible(socketType SocketType) bool {
+	return socketType == SubSocketType
+}
+
+func (pubSocket) IsCommandTypeValid(name string) bool {
+	// FIXME
+	return false
+}
+
+type subSocket struct{}
+
+func (subSocket) Type() SocketType {
+	return SubSocketType
+}
+
+func (subSocket) IsSocketTypeCompatible(socketType SocketType) bool {
+	return socketType == PubSocketType
+}
+
+func (subSocket) IsCommandTypeValid(name string) bool {
 	// FIXME
 	return false
 }

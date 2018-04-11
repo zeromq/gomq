@@ -57,6 +57,12 @@ const (
 
 	// RepSocketType is a ZMQ_REP socket
 	RepSocketType SocketType = "REP"
+
+	// PubSocketType is a ZMQ_PUB socket
+	PubSocketType SocketType = "PUB"
+
+	// SubSocketType is a ZMQ_SUB socket
+	SubSocketType SocketType = "SUB"
 )
 
 // NewConnection accepts an io.ReadWriter and creates a new ZMTP connection
