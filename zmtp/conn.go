@@ -179,10 +179,23 @@ func (c *Connection) sendMetadata(socketType SocketType, socketID SocketIdentity
 }
 
 func (c *Connection) writeMetadata(buffer *bytes.Buffer, name string, value string) {
-	buffer.WriteByte(byte(len(name)))
-	buffer.WriteString(name)
-	binary.Write(buffer, byteOrder, uint32(len(value)))
-	buffer.WriteString(value)
+	var (
+		p        = 0
+		nameLen  = len(name)
+		valueLen = len(value)
+		buf      = make([]byte, 1+nameLen+4+valueLen)
+	)
+	buf[p] = byte(nameLen)
+	p++
+	p += copy(buf[p:], name)
+	byteOrder.PutUint32(buf[p:p+4], uint32(valueLen))
+	p += 4
+	copy(buf[p:], value)
+
+	_, err := buffer.Write(buf)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (c *Connection) recvMetadata() (map[string]string, error) {
