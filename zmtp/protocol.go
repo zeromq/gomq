@@ -69,7 +69,7 @@ type Command struct {
 type Message struct {
 	Index       int
 	Name        string
-	Body        []byte
+	Body        [][]byte
 	Err         error
 	MessageType MessageType
 }

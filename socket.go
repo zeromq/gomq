@@ -105,10 +105,24 @@ func (s *Socket) Recv() ([]byte, error) {
 	msg := <-s.recvChannel
 	if msg.MessageType == zmtp.CommandMessage {
 	}
-	return msg.Body, msg.Err
+	return msg.Body[0], msg.Err
 }
 
 // Send sends a message. FIXME should use a channel.
 func (s *Socket) Send(b []byte) error {
 	return s.conns[s.ids[0]].zmtp.SendFrame(b)
+}
+
+func (s *Socket) SendMultipart(b [][]byte) error {
+	d := make([][]byte, len(b)+1) // FIXME(sbinet): allocates
+	d[0] = nil                    // Socket-Identity
+	copy(d[1:], b)
+	return s.conns[s.ids[0]].zmtp.SendMultipart(d)
+}
+
+func (s *Socket) RecvMultipart() ([][]byte, error) {
+	msg := <-s.recvChannel
+	if msg.MessageType == zmtp.CommandMessage {
+	}
+	return msg.Body, msg.Err
 }

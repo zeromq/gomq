@@ -40,6 +40,10 @@ type ZeroMQSocket interface {
 	AddConnection(*Connection)
 	RemoveConnection(string)
 	RecvChannel() chan *zmtp.Message
+
+	SendMultipart([][]byte) error
+	RecvMultipart() ([][]byte, error)
+
 	Close()
 }
 
