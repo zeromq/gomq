@@ -113,7 +113,7 @@ func (c *Connection) sendGreeting(asServer bool) error {
 	}
 	toNullPaddedString(string(c.securityMechanism.Type()), greeting.Mechanism[:])
 
-	if err := binary.Write(c.rw, byteOrder, &greeting); err != nil {
+	if err := greeting.marshal(c.rw); err != nil {
 		return err
 	}
 
@@ -123,7 +123,7 @@ func (c *Connection) sendGreeting(asServer bool) error {
 func (c *Connection) recvGreeting(asServer bool) error {
 	var greeting greeting
 
-	if err := binary.Read(c.rw, byteOrder, &greeting); err != nil {
+	if err := greeting.unmarshal(c.rw); err != nil {
 		return fmt.Errorf("Error while reading: %v", err)
 	}
 

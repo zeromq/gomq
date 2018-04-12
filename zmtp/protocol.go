@@ -1,6 +1,9 @@
 package zmtp
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"io"
+)
 
 const (
 	majorVersion uint8 = 3
@@ -56,6 +59,39 @@ type greeting struct {
 	Mechanism       [20]byte
 	ServerFlag      byte
 	_               [31]byte
+}
+
+func (g *greeting) unmarshal(r io.Reader) error {
+	var buf [64]byte
+	_, err := io.ReadFull(r, buf[:])
+	if err != nil {
+		return err
+	}
+	g.SignaturePrefix = buf[0]
+	// padding 1 ignored
+	g.SignatureSuffix = buf[9]
+	g.Version[0] = buf[10]
+	g.Version[1] = buf[11]
+	copy(g.Mechanism[:], buf[12:32])
+	g.ServerFlag = buf[32]
+	// padding 2 ignored
+
+	return nil
+}
+
+func (g *greeting) marshal(w io.Writer) error {
+	var buf [64]byte
+	buf[0] = g.SignaturePrefix
+	// padding 1 ignored
+	buf[9] = g.SignatureSuffix
+	buf[10] = g.Version[0]
+	buf[11] = g.Version[1]
+	copy(buf[12:32], g.Mechanism[:])
+	buf[32] = g.ServerFlag
+	// padding 2 ignored
+
+	_, err := w.Write(buf[:])
+	return err
 }
 
 // Command represents an underlying ZMTP command
