@@ -256,17 +256,19 @@ func (c *Connection) recvMetadata() (map[string]string, error) {
 
 // SendCommand sends a ZMTP command over a Connection
 func (c *Connection) SendCommand(commandName string, body []byte) error {
-	if len(commandName) > 255 {
+	cmdLen := len(commandName)
+	if cmdLen > 255 {
 		return errors.New("Command names may not be longer than 255 characters")
 	}
 
-	// Make the buffer of the correct length and reset it
-	buffer := new(bytes.Buffer)
-	buffer.WriteByte(byte(len(commandName)))
-	buffer.Write([]byte(commandName))
-	buffer.Write(body)
+	bodyLen := len(body)
 
-	return c.send(true, buffer.Bytes())
+	buf := make([]byte, 1+cmdLen+bodyLen) // FIXME(sbinet): maybe use a pool of []byte ?
+	buf[0] = byte(cmdLen)
+	copy(buf[1:], []byte(commandName))
+	copy(buf[1+cmdLen:], body)
+
+	return c.send(true, buf)
 }
 
 // SendFrame sends a ZMTP frame over a Connection
