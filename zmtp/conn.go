@@ -2,7 +2,6 @@ package zmtp
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -233,10 +232,7 @@ func (c *Connection) recvMetadata() (map[string]string, error) {
 		i += keyLength
 
 		// Value length
-		var rawValueLength uint32
-		if err := binary.Read(bytes.NewBuffer(command.Body[i:i+4]), byteOrder, &rawValueLength); err != nil {
-			return nil, err
-		}
+		rawValueLength := byteOrder.Uint32(command.Body[i : i+4])
 
 		if uint64(rawValueLength) > uint64(maxInt) {
 			return nil, fmt.Errorf("Length of value %v overflows integer max length %v on this platform", rawValueLength, maxInt)
