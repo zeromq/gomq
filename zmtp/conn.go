@@ -299,11 +299,13 @@ func (c *Connection) send(isCommand bool, body []byte) error {
 	}
 
 	if isLong {
-		if err := binary.Write(c.rw, byteOrder, int64(len(body))); err != nil {
+		var buf [8]byte
+		byteOrder.PutUint64(buf[:], uint64(len(body)))
+		if _, err := c.rw.Write(buf[:]); err != nil {
 			return err
 		}
 	} else {
-		if err := binary.Write(c.rw, byteOrder, uint8(len(body))); err != nil {
+		if _, err := c.rw.Write([]byte{uint8(len(body))}); err != nil {
 			return err
 		}
 	}
@@ -362,14 +364,9 @@ func (c *Connection) read() (bool, []byte, error) {
 	var longLength [8]byte
 
 	// Read out the header
-	readLength := uint64(0)
-	for readLength != 2 {
-		l, err := c.rw.Read(header[readLength:])
-		if err != nil {
-			return false, nil, err
-		}
-
-		readLength += uint64(l)
+	_, err := io.ReadFull(c.rw, header[:])
+	if err != nil {
+		return false, nil, err
 	}
 
 	bitFlags := header[0]
@@ -392,19 +389,12 @@ func (c *Connection) read() (bool, []byte, error) {
 		// We already have the first byte, so assign it, and then read the rest
 		longLength[0] = header[1]
 
-		readLength := 1
-		for readLength != 8 {
-			l, err := c.rw.Read(longLength[readLength:])
-			if err != nil {
-				return false, nil, err
-			}
-
-			readLength += l
-		}
-
-		if err := binary.Read(bytes.NewBuffer(longLength[:]), byteOrder, &bodyLength); err != nil {
+		_, err := io.ReadFull(c.rw, longLength[1:])
+		if err != nil {
 			return false, nil, err
 		}
+
+		bodyLength = byteOrder.Uint64(longLength[:])
 	} else {
 		// Short message length is just 1 byte, read it
 		bodyLength = uint64(header[1])
@@ -414,18 +404,12 @@ func (c *Connection) read() (bool, []byte, error) {
 		return false, nil, fmt.Errorf("Body length %v overflows max int64 value %v", bodyLength, maxInt64)
 	}
 
-	buffer := new(bytes.Buffer)
-	readLength = 0
-	for readLength < bodyLength {
-		l, err := buffer.ReadFrom(io.LimitReader(c.rw, int64(bodyLength)-int64(readLength)))
-		if err != nil {
-			return false, nil, err
-		}
-
-		readLength += uint64(l)
+	buf := make([]byte, bodyLength)
+	_, err = io.ReadFull(c.rw, buf)
+	if err != nil {
+		return false, nil, err
 	}
-
-	return isCommand, buffer.Bytes(), nil
+	return isCommand, buf, nil
 }
 
 func (c *Connection) parseCommand(body []byte) (*Command, error) {
@@ -482,11 +466,13 @@ func (c *Connection) sendMultipart(isCommand bool, bs [][]byte) error {
 		}
 
 		if isLong {
-			if err := binary.Write(c.rw, byteOrder, int64(len(part))); err != nil {
+			var buf [8]byte
+			byteOrder.PutUint64(buf[:], uint64(len(part)))
+			if _, err := c.rw.Write(buf[:]); err != nil {
 				return err
 			}
 		} else {
-			if err := binary.Write(c.rw, byteOrder, uint8(len(part))); err != nil {
+			if _, err := c.rw.Write([]byte{uint8(len(part))}); err != nil {
 				return err
 			}
 		}
@@ -551,14 +537,9 @@ func (c *Connection) readMultipart() (bool, [][]byte, error) {
 
 	for hasMore {
 		// Read out the header
-		readLength := uint64(0)
-		for readLength != 2 {
-			l, err := c.rw.Read(header[readLength:])
-			if err != nil {
-				return false, nil, err
-			}
-
-			readLength += uint64(l)
+		_, err := io.ReadFull(c.rw, header[:])
+		if err != nil {
+			return false, nil, err
 		}
 
 		bitFlags := header[0]
@@ -576,19 +557,12 @@ func (c *Connection) readMultipart() (bool, [][]byte, error) {
 			// We already have the first byte, so assign it, and then read the rest
 			longLength[0] = header[1]
 
-			readLength := 1
-			for readLength != 8 {
-				l, err := c.rw.Read(longLength[readLength:])
-				if err != nil {
-					return false, nil, err
-				}
-
-				readLength += l
-			}
-
-			if err := binary.Read(bytes.NewBuffer(longLength[:]), byteOrder, &bodyLength); err != nil {
+			_, err := io.ReadFull(c.rw, longLength[1:])
+			if err != nil {
 				return false, nil, err
 			}
+
+			bodyLength = byteOrder.Uint64(longLength[:])
 		} else {
 			// Short message length is just 1 byte, read it
 			bodyLength = uint64(header[1])
@@ -598,17 +572,12 @@ func (c *Connection) readMultipart() (bool, [][]byte, error) {
 			return false, nil, fmt.Errorf("Body length %v overflows max int64 value %v", bodyLength, maxInt64)
 		}
 
-		buffer := new(bytes.Buffer)
-		readLength = 0
-		for readLength < bodyLength {
-			l, err := buffer.ReadFrom(io.LimitReader(c.rw, int64(bodyLength)-int64(readLength)))
-			if err != nil {
-				return false, nil, err
-			}
-
-			readLength += uint64(l)
+		buf := make([]byte, bodyLength)
+		_, err = io.ReadFull(c.rw, buf)
+		if err != nil {
+			return false, nil, err
 		}
-		frames = append(frames, buffer.Bytes())
+		frames = append(frames, buf)
 	}
 
 	return isCommand, frames, nil
