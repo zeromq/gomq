@@ -230,3 +230,32 @@ func TestPullPush(t *testing.T) {
 
 	pull.Close()
 }
+
+func TestDealerExtRouter(t *testing.T) {
+
+	go test.StartRouter(31340)
+
+	dealer := NewDealer(zmtp.NewSecurityNull(), "dealer-id")
+	err := dealer.Connect("tcp://127.0.0.1:31340")
+	if err != nil {
+		t.Fatalf("could not connect: %v", err)
+	}
+
+	err = dealer.SendMultipart([][]byte{[]byte("HELLO")})
+	if err != nil {
+		t.Fatalf("could not send message: %v", err)
+	}
+
+	msg, err := dealer.Recv()
+	if err != nil {
+		t.Fatalf("could not receive message: %v", err)
+	}
+
+	if want, got := 0, bytes.Compare([]byte("WORLD"), msg); want != got {
+		t.Fatalf("want %v, got %v", want, got)
+	}
+
+	t.Logf("dealer received: %q", string(msg))
+
+	dealer.Close()
+}

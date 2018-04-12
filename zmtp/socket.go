@@ -20,6 +20,10 @@ func NewSocket(socketType SocketType) (Socket, error) {
 		return pullSocket{}, nil
 	case PushSocketType:
 		return pushSocket{}, nil
+	case DealerSocketType:
+		return dealerSocket{}, nil
+	case RouterSocketType:
+		return routerSocket{}, nil
 	default:
 		return nil, errors.New("Invalid socket type")
 	}
@@ -95,6 +99,52 @@ func (pushSocket) IsSocketTypeCompatible(socketType SocketType) bool {
 
 // IsCommandTypeValid returns if a command is valid for this socket.
 func (pushSocket) IsCommandTypeValid(name string) bool {
+	// FIXME(sbinet)
+	return false
+}
+
+type dealerSocket struct{}
+
+// Type returns the Socket's type
+func (dealerSocket) Type() SocketType {
+	return DealerSocketType
+}
+
+// IsSocketTypeCompatible checks if the socket is compatible with
+// another socket type.
+func (dealerSocket) IsSocketTypeCompatible(socketType SocketType) bool {
+	switch socketType {
+	case DealerSocketType, RepSocketType, RouterSocketType:
+		return true
+	}
+	return false
+}
+
+// IsCommandTypeValid returns if a command is valid for this socket.
+func (dealerSocket) IsCommandTypeValid(name string) bool {
+	// FIXME(sbinet)
+	return false
+}
+
+type routerSocket struct{}
+
+// Type returns the Socket's type
+func (routerSocket) Type() SocketType {
+	return RouterSocketType
+}
+
+// IsSocketTypeCompatible checks if the socket is compatible with
+// another socket type.
+func (routerSocket) IsSocketTypeCompatible(socketType SocketType) bool {
+	switch socketType {
+	case DealerSocketType, ReqSocketType, RouterSocketType:
+		return true
+	}
+	return false
+}
+
+// IsCommandTypeValid returns if a command is valid for this socket.
+func (routerSocket) IsCommandTypeValid(name string) bool {
 	// FIXME(sbinet)
 	return false
 }

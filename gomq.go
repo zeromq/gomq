@@ -36,6 +36,7 @@ type ZeroMQSocket interface {
 	Send([]byte) error
 	RetryInterval() time.Duration
 	SocketType() zmtp.SocketType
+	SocketIdentity() zmtp.SocketIdentity
 	SecurityMechanism() zmtp.SecurityMechanism
 	AddConnection(*Connection)
 	RemoveConnection(string)
@@ -69,7 +70,7 @@ Connect:
 	}
 
 	zmtpConn := zmtp.NewConnection(netConn)
-	_, err = zmtpConn.Prepare(c.SecurityMechanism(), c.SocketType(), false, nil)
+	_, err = zmtpConn.Prepare(c.SecurityMechanism(), c.SocketType(), c.SocketIdentity(), false, nil)
 	if err != nil {
 		return err
 	}
@@ -112,7 +113,7 @@ func BindServer(s Server, endpoint string) (net.Addr, error) {
 	}
 
 	zmtpConn := zmtp.NewConnection(netConn)
-	_, err = zmtpConn.Prepare(s.SecurityMechanism(), s.SocketType(), true, nil)
+	_, err = zmtpConn.Prepare(s.SecurityMechanism(), s.SocketType(), s.SocketIdentity(), true, nil)
 	if err != nil {
 		return netConn.LocalAddr(), err
 	}
@@ -125,4 +126,41 @@ func BindServer(s Server, endpoint string) (net.Addr, error) {
 	s.AddConnection(conn)
 	zmtpConn.Recv(s.RecvChannel())
 	return netConn.LocalAddr(), nil
+}
+
+// Dealer is a gomq interface used for dealer sockets.
+// It implements the Socket interface along with a Connect method for
+// connecting to endpoints.
+type Dealer interface {
+	ZeroMQSocket
+	Connect(endpoint string) error
+}
+
+// ConnectDealer accepts a Dealer interface and an endpoint
+// in the format <proto>://<address>:<port>. It then attempts
+// to connect to the endpoint and perform a ZMTP handshake.
+func ConnectDealer(d Dealer, endpoint string) error {
+	parts := strings.Split(endpoint, "://")
+
+Connect:
+	netConn, err := net.Dial(parts[0], parts[1])
+	if err != nil {
+		time.Sleep(d.RetryInterval())
+		goto Connect
+	}
+
+	zmtpConn := zmtp.NewConnection(netConn)
+	_, err = zmtpConn.Prepare(d.SecurityMechanism(), d.SocketType(), d.SocketIdentity(), false, nil)
+	if err != nil {
+		return err
+	}
+
+	conn := &Connection{
+		net:  netConn,
+		zmtp: zmtpConn,
+	}
+
+	d.AddConnection(conn)
+	zmtpConn.RecvMultipart(d.RecvChannel())
+	return nil
 }

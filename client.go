@@ -12,7 +12,7 @@ type ClientSocket struct {
 // a ClientSocket as a gomq.Client interface.
 func NewClient(mechanism zmtp.SecurityMechanism) Client {
 	return &ClientSocket{
-		Socket: NewSocket(false, zmtp.ClientSocketType, mechanism),
+		Socket: NewSocket(false, zmtp.ClientSocketType, nil, mechanism),
 	}
 }
 

@@ -21,6 +21,19 @@ type Connection struct {
 // SocketType is a ZMTP socket type
 type SocketType string
 
+// SocketIdentity is the ZMTP metadata socket identity.
+// See:
+//  https://rfc.zeromq.org/spec:23/ZMTP/.
+type SocketIdentity []byte
+
+func (id SocketIdentity) String() string {
+	n := len(id)
+	if n > 255 { // ZMTP identities are: 0*255OCTET
+		n = 255
+	}
+	return string(id[:n])
+}
+
 const (
 	// ClientSocketType is a ZMQ_CLIENT socket
 	ClientSocketType SocketType = "CLIENT"
@@ -33,6 +46,18 @@ const (
 
 	// PushSocketType is a ZMQ_PUSH socket
 	PushSocketType SocketType = "PUSH"
+
+	// DealerSocketType is a ZMQ_DEALER socket
+	DealerSocketType SocketType = "DEALER"
+
+	// RouterSocketType is a ZMQ_ROUTER socket
+	RouterSocketType SocketType = "ROUTER"
+
+	// ReqSocketType is a ZMQ_REQ socket
+	ReqSocketType SocketType = "REQ"
+
+	// RepSocketType is a ZMQ_REP socket
+	RepSocketType SocketType = "REP"
 )
 
 // NewConnection accepts an io.ReadWriter and creates a new ZMTP connection
@@ -41,7 +66,7 @@ func NewConnection(rw io.ReadWriter) *Connection {
 }
 
 // Prepare performs a ZMTP handshake over a Connection's readWriter
-func (c *Connection) Prepare(mechanism SecurityMechanism, socketType SocketType, asServer bool, applicationMetadata map[string]string) (map[string]string, error) {
+func (c *Connection) Prepare(mechanism SecurityMechanism, socketType SocketType, socketID SocketIdentity, asServer bool, applicationMetadata map[string]string) (map[string]string, error) {
 	if c.isPrepared {
 		return nil, errors.New("Connection was already prepared")
 	}
@@ -68,7 +93,7 @@ func (c *Connection) Prepare(mechanism SecurityMechanism, socketType SocketType,
 	}
 
 	// Send/recv metadata
-	if err := c.sendMetadata(socketType, applicationMetadata); err != nil {
+	if err := c.sendMetadata(socketType, socketID, applicationMetadata); err != nil {
 		return nil, fmt.Errorf("gomq/zmtp: Got error while sending metadata: %v", err)
 	}
 
@@ -129,7 +154,7 @@ func (c *Connection) recvGreeting(asServer bool) error {
 	return nil
 }
 
-func (c *Connection) sendMetadata(socketType SocketType, applicationMetadata map[string]string) error {
+func (c *Connection) sendMetadata(socketType SocketType, socketID SocketIdentity, applicationMetadata map[string]string) error {
 	buffer := new(bytes.Buffer)
 	var usedKeys map[string]struct{}
 
@@ -148,6 +173,7 @@ func (c *Connection) sendMetadata(socketType SocketType, applicationMetadata map
 	}
 
 	c.writeMetadata(buffer, "socket-type", string(socketType))
+	c.writeMetadata(buffer, "Identity", socketID.String())
 
 	return c.SendCommand("READY", buffer.Bytes())
 }
