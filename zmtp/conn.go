@@ -34,29 +34,18 @@ func (id SocketIdentity) String() string {
 }
 
 const (
-	// ClientSocketType is a ZMQ_CLIENT socket
-	ClientSocketType SocketType = "CLIENT"
-
-	// ServerSocketType is a ZMQ_SERVER socket
-	ServerSocketType SocketType = "SERVER"
-
-	// PullSocketType is a ZMQ_PULL socket
-	PullSocketType SocketType = "PULL"
-
-	// PushSocketType is a ZMQ_PUSH socket
-	PushSocketType SocketType = "PUSH"
-
-	// DealerSocketType is a ZMQ_DEALER socket
-	DealerSocketType SocketType = "DEALER"
-
-	// RouterSocketType is a ZMQ_ROUTER socket
-	RouterSocketType SocketType = "ROUTER"
-
-	// ReqSocketType is a ZMQ_REQ socket
-	ReqSocketType SocketType = "REQ"
-
-	// RepSocketType is a ZMQ_REP socket
-	RepSocketType SocketType = "REP"
+	ClientSocketType SocketType = "CLIENT" // a ZMQ_CLIENT socket
+	ServerSocketType SocketType = "SERVER" // a ZMQ_SERVER socket
+	PullSocketType   SocketType = "PULL"   // a ZMQ_PULL socket
+	PushSocketType   SocketType = "PUSH"   // a ZMQ_PUSH socket
+	DealerSocketType SocketType = "DEALER" // a ZMQ_DEALER socket
+	RouterSocketType SocketType = "ROUTER" // a ZMQ_ROUTER socket
+	ReqSocketType    SocketType = "REQ"    // a ZMQ_REQ socket
+	RepSocketType    SocketType = "REP"    // a ZMQ_REP socket
+	PubSocketType    SocketType = "PUB"    // a ZMQ_PUB socket
+	SubSocketType    SocketType = "SUB"    // a ZMQ_SUB socket
+	XPubSocketType   SocketType = "XPUB"   // a ZMQ_XPUB socket
+	XSubSocketType   SocketType = "XSUB"   // a ZMQ_XSUB socket
 )
 
 // NewConnection accepts an io.ReadWriter and creates a new ZMTP connection
@@ -276,7 +265,7 @@ func (c *Connection) SendCommand(commandName string, body []byte) error {
 	buf[0] = byte(cmdLen)
 	copy(buf[1:], []byte(commandName))
 	copy(buf[1+cmdLen:], body)
-
+  
 	return c.send(true, buf)
 }
 
