@@ -2,7 +2,6 @@ package zmtp
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -113,7 +112,7 @@ func (c *Connection) sendGreeting(asServer bool) error {
 	}
 	toNullPaddedString(string(c.securityMechanism.Type()), greeting.Mechanism[:])
 
-	if err := binary.Write(c.rw, byteOrder, &greeting); err != nil {
+	if err := greeting.marshal(c.rw); err != nil {
 		return err
 	}
 
@@ -123,7 +122,7 @@ func (c *Connection) sendGreeting(asServer bool) error {
 func (c *Connection) recvGreeting(asServer bool) error {
 	var greeting greeting
 
-	if err := binary.Read(c.rw, byteOrder, &greeting); err != nil {
+	if err := greeting.unmarshal(c.rw); err != nil {
 		return fmt.Errorf("Error while reading: %v", err)
 	}
 
@@ -179,10 +178,23 @@ func (c *Connection) sendMetadata(socketType SocketType, socketID SocketIdentity
 }
 
 func (c *Connection) writeMetadata(buffer *bytes.Buffer, name string, value string) {
-	buffer.WriteByte(byte(len(name)))
-	buffer.WriteString(name)
-	binary.Write(buffer, byteOrder, uint32(len(value)))
-	buffer.WriteString(value)
+	var (
+		p        = 0
+		nameLen  = len(name)
+		valueLen = len(value)
+		buf      = make([]byte, 1+nameLen+4+valueLen)
+	)
+	buf[p] = byte(nameLen)
+	p++
+	p += copy(buf[p:], name)
+	byteOrder.PutUint32(buf[p:p+4], uint32(valueLen))
+	p += 4
+	copy(buf[p:], value)
+
+	_, err := buffer.Write(buf)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (c *Connection) recvMetadata() (map[string]string, error) {
@@ -220,10 +232,7 @@ func (c *Connection) recvMetadata() (map[string]string, error) {
 		i += keyLength
 
 		// Value length
-		var rawValueLength uint32
-		if err := binary.Read(bytes.NewBuffer(command.Body[i:i+4]), byteOrder, &rawValueLength); err != nil {
-			return nil, err
-		}
+		rawValueLength := byteOrder.Uint32(command.Body[i : i+4])
 
 		if uint64(rawValueLength) > uint64(maxInt) {
 			return nil, fmt.Errorf("Length of value %v overflows integer max length %v on this platform", rawValueLength, maxInt)
@@ -256,17 +265,19 @@ func (c *Connection) recvMetadata() (map[string]string, error) {
 
 // SendCommand sends a ZMTP command over a Connection
 func (c *Connection) SendCommand(commandName string, body []byte) error {
-	if len(commandName) > 255 {
+	cmdLen := len(commandName)
+	if cmdLen > 255 {
 		return errors.New("Command names may not be longer than 255 characters")
 	}
 
-	// Make the buffer of the correct length and reset it
-	buffer := new(bytes.Buffer)
-	buffer.WriteByte(byte(len(commandName)))
-	buffer.Write([]byte(commandName))
-	buffer.Write(body)
+	bodyLen := len(body)
 
-	return c.send(true, buffer.Bytes())
+	buf := make([]byte, 1+cmdLen+bodyLen) // FIXME(sbinet): maybe use a pool of []byte ?
+	buf[0] = byte(cmdLen)
+	copy(buf[1:], []byte(commandName))
+	copy(buf[1+cmdLen:], body)
+
+	return c.send(true, buf)
 }
 
 // SendFrame sends a ZMTP frame over a Connection
@@ -299,11 +310,13 @@ func (c *Connection) send(isCommand bool, body []byte) error {
 	}
 
 	if isLong {
-		if err := binary.Write(c.rw, byteOrder, int64(len(body))); err != nil {
+		var buf [8]byte
+		byteOrder.PutUint64(buf[:], uint64(len(body)))
+		if _, err := c.rw.Write(buf[:]); err != nil {
 			return err
 		}
 	} else {
-		if err := binary.Write(c.rw, byteOrder, uint8(len(body))); err != nil {
+		if _, err := c.rw.Write([]byte{uint8(len(body))}); err != nil {
 			return err
 		}
 	}
@@ -362,14 +375,9 @@ func (c *Connection) read() (bool, []byte, error) {
 	var longLength [8]byte
 
 	// Read out the header
-	readLength := uint64(0)
-	for readLength != 2 {
-		l, err := c.rw.Read(header[readLength:])
-		if err != nil {
-			return false, nil, err
-		}
-
-		readLength += uint64(l)
+	_, err := io.ReadFull(c.rw, header[:])
+	if err != nil {
+		return false, nil, err
 	}
 
 	bitFlags := header[0]
@@ -392,19 +400,12 @@ func (c *Connection) read() (bool, []byte, error) {
 		// We already have the first byte, so assign it, and then read the rest
 		longLength[0] = header[1]
 
-		readLength := 1
-		for readLength != 8 {
-			l, err := c.rw.Read(longLength[readLength:])
-			if err != nil {
-				return false, nil, err
-			}
-
-			readLength += l
-		}
-
-		if err := binary.Read(bytes.NewBuffer(longLength[:]), byteOrder, &bodyLength); err != nil {
+		_, err := io.ReadFull(c.rw, longLength[1:])
+		if err != nil {
 			return false, nil, err
 		}
+
+		bodyLength = byteOrder.Uint64(longLength[:])
 	} else {
 		// Short message length is just 1 byte, read it
 		bodyLength = uint64(header[1])
@@ -414,18 +415,12 @@ func (c *Connection) read() (bool, []byte, error) {
 		return false, nil, fmt.Errorf("Body length %v overflows max int64 value %v", bodyLength, maxInt64)
 	}
 
-	buffer := new(bytes.Buffer)
-	readLength = 0
-	for readLength < bodyLength {
-		l, err := buffer.ReadFrom(io.LimitReader(c.rw, int64(bodyLength)-int64(readLength)))
-		if err != nil {
-			return false, nil, err
-		}
-
-		readLength += uint64(l)
+	buf := make([]byte, bodyLength)
+	_, err = io.ReadFull(c.rw, buf)
+	if err != nil {
+		return false, nil, err
 	}
-
-	return isCommand, buffer.Bytes(), nil
+	return isCommand, buf, nil
 }
 
 func (c *Connection) parseCommand(body []byte) (*Command, error) {
@@ -482,11 +477,13 @@ func (c *Connection) sendMultipart(isCommand bool, bs [][]byte) error {
 		}
 
 		if isLong {
-			if err := binary.Write(c.rw, byteOrder, int64(len(part))); err != nil {
+			var buf [8]byte
+			byteOrder.PutUint64(buf[:], uint64(len(part)))
+			if _, err := c.rw.Write(buf[:]); err != nil {
 				return err
 			}
 		} else {
-			if err := binary.Write(c.rw, byteOrder, uint8(len(part))); err != nil {
+			if _, err := c.rw.Write([]byte{uint8(len(part))}); err != nil {
 				return err
 			}
 		}
@@ -551,14 +548,9 @@ func (c *Connection) readMultipart() (bool, [][]byte, error) {
 
 	for hasMore {
 		// Read out the header
-		readLength := uint64(0)
-		for readLength != 2 {
-			l, err := c.rw.Read(header[readLength:])
-			if err != nil {
-				return false, nil, err
-			}
-
-			readLength += uint64(l)
+		_, err := io.ReadFull(c.rw, header[:])
+		if err != nil {
+			return false, nil, err
 		}
 
 		bitFlags := header[0]
@@ -576,19 +568,12 @@ func (c *Connection) readMultipart() (bool, [][]byte, error) {
 			// We already have the first byte, so assign it, and then read the rest
 			longLength[0] = header[1]
 
-			readLength := 1
-			for readLength != 8 {
-				l, err := c.rw.Read(longLength[readLength:])
-				if err != nil {
-					return false, nil, err
-				}
-
-				readLength += l
-			}
-
-			if err := binary.Read(bytes.NewBuffer(longLength[:]), byteOrder, &bodyLength); err != nil {
+			_, err := io.ReadFull(c.rw, longLength[1:])
+			if err != nil {
 				return false, nil, err
 			}
+
+			bodyLength = byteOrder.Uint64(longLength[:])
 		} else {
 			// Short message length is just 1 byte, read it
 			bodyLength = uint64(header[1])
@@ -598,17 +583,12 @@ func (c *Connection) readMultipart() (bool, [][]byte, error) {
 			return false, nil, fmt.Errorf("Body length %v overflows max int64 value %v", bodyLength, maxInt64)
 		}
 
-		buffer := new(bytes.Buffer)
-		readLength = 0
-		for readLength < bodyLength {
-			l, err := buffer.ReadFrom(io.LimitReader(c.rw, int64(bodyLength)-int64(readLength)))
-			if err != nil {
-				return false, nil, err
-			}
-
-			readLength += uint64(l)
+		buf := make([]byte, bodyLength)
+		_, err = io.ReadFull(c.rw, buf)
+		if err != nil {
+			return false, nil, err
 		}
-		frames = append(frames, buffer.Bytes())
+		frames = append(frames, buf)
 	}
 
 	return isCommand, frames, nil
