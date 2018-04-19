@@ -265,7 +265,7 @@ func (c *Connection) SendCommand(commandName string, body []byte) error {
 	buf[0] = byte(cmdLen)
 	copy(buf[1:], []byte(commandName))
 	copy(buf[1+cmdLen:], body)
-
+  
 	return c.send(true, buf)
 }
 
