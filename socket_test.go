@@ -259,3 +259,11 @@ func TestDealerExtRouter(t *testing.T) {
 
 	dealer.Close()
 }
+
+func TestBadEndpointError(t *testing.T) {
+	client := NewClient(zmtp.NewSecurityNull())
+	err := client.Connect("ipc://@/not-yet-implemented")
+	if err == nil {
+		t.Error("ipc protocol MUST raise error")
+	}
+}
