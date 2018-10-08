@@ -1,12 +1,19 @@
 package gomq
 
 import (
+	"fmt"
 	"net"
 	"strings"
 	"time"
 
 	"github.com/zeromq/gomq/zmtp"
 )
+
+type ErrBadProto string;
+
+func (e ErrBadProto) Error() string {
+	return fmt.Sprintf("Protocol '%s' not known to gomq", string(e));
+}
 
 var (
 	defaultRetry = 250 * time.Millisecond
@@ -61,6 +68,10 @@ type Client interface {
 // to connect to the endpoint and perform a ZMTP handshake.
 func ConnectClient(c Client, endpoint string) error {
 	parts := strings.Split(endpoint, "://")
+
+	if parts[0] != "tcp" {
+		return ErrBadProto(parts[0])
+	}
 
 Connect:
 	netConn, err := net.Dial(parts[0], parts[1])
