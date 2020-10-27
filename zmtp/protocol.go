@@ -7,7 +7,7 @@ import (
 
 const (
 	majorVersion uint8 = 3
-	minorVersion uint8 = 0
+	minorVersion uint8 = 1
 )
 
 const (
