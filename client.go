@@ -11,8 +11,9 @@ type ClientSocket struct {
 // NewClient accepts a zmtp.SecurityMechanism and returns
 // a ClientSocket as a gomq.Client interface.
 func NewClient(mechanism zmtp.SecurityMechanism) Client {
+	uuid, _ := newUUID()
 	return &ClientSocket{
-		Socket: NewSocket(false, zmtp.ClientSocketType, nil, mechanism),
+		Socket: NewSocket(false, zmtp.ClientSocketType, []byte(uuid), mechanism),
 	}
 }
 
