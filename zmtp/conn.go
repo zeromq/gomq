@@ -11,6 +11,7 @@ import (
 // Connection is a ZMTP level connection
 type Connection struct {
 	rw                         io.ReadWriter
+	metadata                   map[string]string
 	securityMechanism          SecurityMechanism
 	socket                     Socket
 	isPrepared                 bool
@@ -50,7 +51,10 @@ const (
 
 // NewConnection accepts an io.ReadWriter and creates a new ZMTP connection
 func NewConnection(rw io.ReadWriter) *Connection {
-	return &Connection{rw: rw}
+	return &Connection{
+		rw:       rw,
+		metadata: make(map[string]string),
+	}
 }
 
 // Prepare performs a ZMTP handshake over a Connection's readWriter
@@ -205,7 +209,6 @@ func (c *Connection) recvMetadata() (map[string]string, error) {
 		return nil, fmt.Errorf("Got a %v command for metadata instead of the expected READY command frame", command.Name)
 	}
 
-	metadata := make(map[string]string)
 	applicationMetadata := make(map[string]string)
 	i := 0
 	for i < len(command.Body) {
@@ -240,16 +243,24 @@ func (c *Connection) recvMetadata() (map[string]string, error) {
 		if strings.HasPrefix(key, "x-") {
 			applicationMetadata[key[2:]] = value
 		} else {
-			metadata[key] = value
+			c.metadata[key] = value
 		}
 	}
 
-	socketType := metadata["socket-type"]
+	socketType := c.metadata["socket-type"]
 	if !c.socket.IsSocketTypeCompatible(SocketType(socketType)) {
 		return nil, fmt.Errorf("Socket type %v is not compatible with %v", c.socket.Type(), socketType)
 	}
 
 	return applicationMetadata, nil
+}
+
+// GetIdentity get connection's identity
+func (c *Connection) GetIdentity() (string, error) {
+	if identity, ok := c.metadata["identity"]; ok {
+		return identity, nil
+	}
+	return "", fmt.Errorf("Indentiy not exist")
 }
 
 // SendCommand sends a ZMTP command over a Connection
@@ -265,7 +276,7 @@ func (c *Connection) SendCommand(commandName string, body []byte) error {
 	buf[0] = byte(cmdLen)
 	copy(buf[1:], []byte(commandName))
 	copy(buf[1+cmdLen:], body)
-  
+
 	return c.send(true, buf)
 }
 

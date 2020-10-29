@@ -1,6 +1,7 @@
 package gomq
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -42,9 +43,9 @@ func NewSocket(asServer bool, sockType zmtp.SocketType, sockID zmtp.SocketIdenti
 // It is goroutine safe.
 func (s *Socket) AddConnection(conn *Connection) {
 	s.lock.Lock()
-	uuid, err := newUUID()
+	uuid, err := conn.zmtp.GetIdentity()
 	if err != nil {
-		panic(err)
+		uuid, _ = newUUID()
 	}
 
 	s.conns[uuid] = conn
@@ -58,14 +59,22 @@ func (s *Socket) AddConnection(conn *Connection) {
 // exist in map
 func (s *Socket) RemoveConnection(uuid string) {
 	s.lock.Lock()
+	defer s.lock.Unlock()
 	for k, v := range s.ids {
 		if v == uuid {
 			s.ids = append(s.ids[:k], s.ids[k+1:]...)
+			s.conns[uuid].net.Close()
+			delete(s.conns, uuid)
 		}
 	}
-	s.conns[uuid].net.Close()
-	delete(s.conns, uuid)
-	s.lock.Unlock()
+}
+
+// GetConnection returns the connection by identity
+func (s *Socket) GetConnection(uuid string) (*Connection, error) {
+	if conns, ok := s.conns[uuid]; ok {
+		return conns, nil
+	}
+	return nil, errors.New("conn not exist")
 }
 
 // RetryInterval returns the retry interval used
