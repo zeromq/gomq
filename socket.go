@@ -45,7 +45,7 @@ func (s *Socket) AddConnection(conn *Connection) {
 	s.lock.Lock()
 	uuid, err := conn.zmtp.GetIdentity()
 	if err != nil {
-		panic(err)
+		uuid, _ = newUUID()
 	}
 
 	s.conns[uuid] = conn
