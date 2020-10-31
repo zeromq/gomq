@@ -2,6 +2,7 @@ package gomq
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"time"
@@ -9,10 +10,10 @@ import (
 	"github.com/zeromq/gomq/zmtp"
 )
 
-type ErrBadProto string;
+type ErrBadProto string
 
 func (e ErrBadProto) Error() string {
-	return fmt.Sprintf("Protocol '%s' not known to gomq", string(e));
+	return fmt.Sprintf("Protocol '%s' not known to gomq", string(e))
 }
 
 var (
@@ -35,6 +36,19 @@ func NewConnection(netConn net.Conn, zmtpConn *zmtp.Connection) *Connection {
 		zmtp: zmtpConn,
 	}
 	return conn
+}
+
+// Send sends a message. FIXME should use a channel.
+func (c *Connection) Send(b []byte) error {
+	return c.zmtp.SendFrame(b)
+}
+
+// SendMultipart ...
+func (c *Connection) SendMultipart(b [][]byte) error {
+	d := make([][]byte, len(b)+1) // FIXME(sbinet): allocates
+	d[0] = nil                    // Socket-Identity
+	copy(d[1:], b)
+	return c.zmtp.SendMultipart(d)
 }
 
 // ZeroMQSocket is the base gomq interface.
@@ -106,9 +120,7 @@ type Server interface {
 
 // BindServer accepts a Server interface and an endpoint
 // in the format <proto>://<address>:<port>. It then attempts
-// to bind to the endpoint. TODO: change this to starting
-// a listener on the endpoint that performs handshakes
-// with any client that connects
+// to bind to the endpoint.
 func BindServer(s Server, endpoint string) (net.Addr, error) {
 	var addr net.Addr
 	parts := strings.Split(endpoint, "://")
@@ -118,25 +130,45 @@ func BindServer(s Server, endpoint string) (net.Addr, error) {
 		return addr, err
 	}
 
-	netConn, err := ln.Accept()
-	if err != nil {
-		return addr, err
-	}
+	go func() {
+		for {
+			netConn, err := ln.Accept()
+			if err != nil {
+				continue
+			}
 
-	zmtpConn := zmtp.NewConnection(netConn)
-	_, err = zmtpConn.Prepare(s.SecurityMechanism(), s.SocketType(), s.SocketIdentity(), true, nil)
-	if err != nil {
-		return netConn.LocalAddr(), err
-	}
+			go func() {
+				zmtpConn := zmtp.NewConnection(netConn)
+				_, err = zmtpConn.Prepare(s.SecurityMechanism(), s.SocketType(), s.SocketIdentity(), true, nil)
 
-	conn := &Connection{
-		net:  netConn,
-		zmtp: zmtpConn,
-	}
+				if err != nil {
+					return
+				}
 
-	s.AddConnection(conn)
-	zmtpConn.Recv(s.RecvChannel())
-	return netConn.LocalAddr(), nil
+				// replace conn, if identity already exist.
+				identity, _ := zmtpConn.GetIdentity()
+				s.RemoveConnection(identity)
+				s.AddConnection(NewConnection(netConn, zmtpConn))
+
+				// remove conn, if the connection has lost.
+				zmtpMsgs := make(chan *zmtp.Message, 3)
+				zmtpConn.Recv(zmtpMsgs)
+				for {
+					msg := <-zmtpMsgs
+
+					if msg != nil && msg.Err == io.EOF {
+						s.RemoveConnection(identity)
+						break
+					}
+
+					s.RecvChannel() <- msg
+				}
+
+			}()
+		}
+	}()
+	time.Sleep(500 * time.Millisecond)
+	return ln.Addr(), nil
 }
 
 // Dealer is a gomq interface used for dealer sockets.

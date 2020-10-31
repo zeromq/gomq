@@ -44,7 +44,7 @@ func NewSocket(asServer bool, sockType zmtp.SocketType, sockID zmtp.SocketIdenti
 func (s *Socket) AddConnection(conn *Connection) {
 	s.lock.Lock()
 	uuid, err := conn.zmtp.GetIdentity()
-	if err != nil {
+	if err != nil || uuid == "" {
 		uuid, _ = newUUID()
 	}
 
@@ -124,16 +124,26 @@ func (s *Socket) Recv() ([]byte, error) {
 	return msg.Body[0], msg.Err
 }
 
-// Send sends a message. FIXME should use a channel.
+// Send sends to all conn a message. FIXME should use a channel.
 func (s *Socket) Send(b []byte) error {
-	return s.conns[s.ids[0]].zmtp.SendFrame(b)
+	for _, conn := range s.conns {
+		if err := conn.zmtp.SendFrame(b); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Socket) SendMultipart(b [][]byte) error {
 	d := make([][]byte, len(b)+1) // FIXME(sbinet): allocates
 	d[0] = nil                    // Socket-Identity
 	copy(d[1:], b)
-	return s.conns[s.ids[0]].zmtp.SendMultipart(d)
+	for _, conn := range s.conns {
+		if err := conn.zmtp.SendMultipart(d); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Socket) RecvMultipart() ([][]byte, error) {
