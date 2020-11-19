@@ -15,6 +15,7 @@ type Connection struct {
 	securityMechanism          SecurityMechanism
 	socket                     Socket
 	isPrepared                 bool
+	isDowngraded               bool
 	asServer, otherEndAsServer bool
 }
 
@@ -128,7 +129,11 @@ func (c *Connection) recvGreeting(asServer bool) error {
 	}
 
 	if greeting.Version != version {
-		return fmt.Errorf("Version %v.%v received does match expected version %v.%v", int(greeting.Version[0]), int(greeting.Version[1]), int(majorVersion), int(minorVersion))
+		if greeting.Version[0] == version[0] && greeting.Version[1] < version[1] {
+			c.isDowngraded = true
+		} else {
+			return fmt.Errorf("Version %v.%v received does match expected version %v.%v", int(greeting.Version[0]), int(greeting.Version[1]), int(majorVersion), int(minorVersion))
+		}
 	}
 
 	var otherMechanism = fromNullPaddedString(greeting.Mechanism[:])
