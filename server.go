@@ -3,7 +3,7 @@ package gomq
 import (
 	"net"
 
-	"github.com/zeromq/gomq/zmtp"
+	"github.com/myzhan/gomq/zmtp"
 )
 
 // ServerSocket is a ZMQ_SERVER socket type.

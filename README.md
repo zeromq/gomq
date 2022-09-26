@@ -1,4 +1,4 @@
-# GoMQ [![Build Status](https://travis-ci.org/zeromq/gomq.svg?branch=master)](https://travis-ci.org/zeromq/gomq) [![Doc Status](https://godoc.org/github.com/zeromq/gomq?status.png)](https://godoc.org/github.com/zeromq/gomq)
+# GoMQ [![Build Status](https://travis-ci.org/myzhan/gomq.svg?branch=master)](https://travis-ci.org/myzhan/gomq) [![Doc Status](https://godoc.org/github.com/myzhan/gomq?status.png)](https://godoc.org/github.com/myzhan/gomq)
 
 ## Introduction
 A pure Go implementation of the [ZeroMQ Message Transport Protocol](http://rfc.zeromq.org/spec:37). **Danger Will Robinson, Danger!** This code is very young. There will be false starts, APIs will change and things will break. If you are looking to use ZeroMQ with Go in a production project, we suggest using [GoCZMQ](http://github.com/zeromq/goczmq), which depends on the [CZMQ](http://github.com/zeromq/czmq) C API. 
@@ -15,7 +15,7 @@ GoMQ will be a pure Go implementation of a subset of ZMTP, wrapped with a friend
 * The CURVE securty mechanism
 
 ## Contribution Guidelines
-GoMQ adheres to the [Collective Code Construction Contract](http://rfc.zeromq.org/spec:22). For details, see [CONTRIBUTING.md](https://github.com/zeromq/gomq/blob/master/CONTRIBUTING.md). We believe that building a community is an essential component of succesful open source software, and not just a side effect. [People before code!](http://hintjens.com/blog:95)
+GoMQ adheres to the [Collective Code Construction Contract](http://rfc.zeromq.org/spec:22). For details, see [CONTRIBUTING.md](https://github.com/myzhan/gomq/blob/master/CONTRIBUTING.md). We believe that building a community is an essential component of succesful open source software, and not just a side effect. [People before code!](http://hintjens.com/blog:95)
 
 ## Setting Up Your Development Environment
 While the end goal of GoMQ is a pure Go implementation of ZeroMQ with no dependencies on cgo, we currently require cgo for our test suite. The friction this creates in getting started is unfortunate but we feel it's the best way to test interoperability between our implemenation and the reference implementation of the protocol. Assuming that you already have a working Go development environment ( see: [The Go Programming Language: Getting Started](https://golang.org/doc/install) ) you will additionally need the following libraries:
@@ -90,7 +90,7 @@ You should now be ready to get started. Fork gomq, clone it, and make sure the t
 --- PASS: TestExternalServer (0.25s)
 	socket_test.go:94: client received: "WORLD"
 PASS
-ok		github.com/zeromq/gomq	0.255s
+ok		github.com/myzhan/gomq	0.255s
 ```
 
 Now you're ready. Remember: pull requests should always be simple solutions to minimal problems. If you're stuck, want to discuss ideas or just want to say hello, some of us are usually lurking in the #zeromq channel on the [gophers slack](https://blog.gopheracademy.com/gophers-slack-community/).
