@@ -1,6 +1,6 @@
 package gomq
 
-import "github.com/zeromq/gomq/zmtp"
+import "github.com/myzhan/gomq/zmtp"
 
 // ClientSocket is a ZMQ_CLIENT socket type.
 // See: http://rfc.zeromq.org/spec:41

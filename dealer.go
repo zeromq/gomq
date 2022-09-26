@@ -1,6 +1,6 @@
 package gomq
 
-import "github.com/zeromq/gomq/zmtp"
+import "github.com/myzhan/gomq/zmtp"
 
 // DealerSocket is a ZMQ_DEALER socket type.
 // See: https://rfc.zeromq.org/spec:28
